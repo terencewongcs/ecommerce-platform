@@ -11,5 +11,5 @@
     "noEmit": true,
     "outDir": "dist"
   },
-  "include": ["pages", "components", "hooks", "lib"]
+  "include": ["src"]
 }

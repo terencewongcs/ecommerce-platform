@@ -8,20 +8,19 @@
 
 ### Frontend — Storefront
 
-- **框架**：Vike v0.4（基于 Vite v6，SSR / SSG / CSR 按路由混合）
+- **框架**：Vite v6（CSR，初始开发阶段全页面客户端渲染，SSR/SSG 后续按需引入）
 - **语言**：TypeScript ^5.5（strict mode）
-- **UI**：React ^18.0 + `@trendyuniquellc/ui-library`
+- **UI**：React ^19.0 + `@trendyuniquellc/ui-library`
+- **路由**：React Router v6
 - **样式**：Tailwind CSS v3（锁定 v3，兼容 `tailwind.preset.cjs`；v4 删除了 `presets` API）
 - **数据请求**：TanStack Query（React Query）v5
 - **表单**：React Hook Form v7 + Zod v3
-- **Head 管理**：Vike 原生（`+Head.tsx` / `useConfig()`）
-- **MUI SSR**：`@emotion/server`（`extractCriticalToChunks` 提取 critical CSS）
 
 ### Frontend — Dashboard
 
 - **框架**：Vite v6（CSR）
 - **语言**：TypeScript ^5.5（strict mode）
-- **UI**：React ^18.0 + `@trendyuniquellc/ui-library`
+- **UI**：React ^19.0 + `@trendyuniquellc/ui-library`
 - **表格**：TanStack Table v8
 - **图表**：Recharts v2
 - **富文本**：TipTap v2
@@ -60,12 +59,16 @@
 ```
 trendyuniquellc/ecommerce-platform/
 ├── apps/
-│   ├── storefront/                  # Vike SSR/SSG/CSR 前台商城
-│   │   ├── pages/                   # Vike 路由页面（+Page.tsx / +onRenderHtml.tsx 等）
-│   │   ├── components/              # 页面级组件（非 ui-library 通用组件）
-│   │   ├── hooks/                   # 页面级自定义 Hooks
-│   │   ├── lib/                     # 工具函数、API client 封装
-│   │   └── public/                  # 静态资源
+│   ├── storefront/                  # Vite CSR 前台商城
+│   │   ├── src/
+│   │   │   ├── main.tsx             # React 挂载入口
+│   │   │   ├── App.tsx              # React Router 路由配置
+│   │   │   ├── pages/               # 路由页面组件
+│   │   │   ├── components/          # 页面级组件（非 ui-library 通用组件）
+│   │   │   ├── hooks/               # 页面级自定义 Hooks
+│   │   │   └── lib/                 # 工具函数、API client 封装
+│   │   ├── index.html               # Vite 入口 HTML
+│   │   └── public/                  # 静态资源（不经过 Vite 处理，直接服务）
 │   │
 │   └── dashboard/                   # Vite CSR 后台管理
 │       └── src/
@@ -164,36 +167,18 @@ trendyuniquellc/ecommerce-platform/
 
 ## 渲染规范（Storefront）
 
-| 路由 | 渲染方式 | 原因 |
+> **初始开发阶段**：所有路由均为 CSR（客户端渲染），使用 Vite 构建为纯静态 SPA。SSR/SSG 在后续阶段按 SEO 需求引入。
+
+| 路由 | 渲染方式 | 说明 |
 |------|----------|------|
-| `/` | SSG（预渲染） | 首页内容变化慢，构建时生成，CDN 直出 |
-| `/products/:slug` | SSR | Google 必须索引完整商品内容 |
-| `/search` | SSR | 搜索结果页是 SEO 流量主入口 |
+| `/` | CSR | 当前阶段 CSR；后续可升级为 SSG |
+| `/products/:slug` | CSR | 当前阶段 CSR；后续升级为 SSR（SEO 需要） |
+| `/search` | CSR | 当前阶段 CSR；后续升级为 SSR（SEO 需要） |
 | `/cart` | CSR | 纯客户端状态，无需 SEO |
 | `/checkout` | CSR | 支付流程，无需 SEO |
 | `/orders/:id` | CSR | 登录后页面，无需 SEO |
 | `/account/*` | CSR | 用户私有页面，无需 SEO |
 | `/auth/*` | CSR | 登录注册，无需 SEO |
-
-### Vike SSR + React Query 数据流
-
-- `+onRenderHtml.tsx`：创建 `QueryClient`，prefetch 所需数据，调用 `dehydrate(queryClient)` 并将结果序列化注入 HTML
-- `+onRenderClient.tsx`：用 `HydrationBoundary` + dehydrated state 恢复客户端 Query 状态，避免重复请求
-
-### MUI SSR Critical CSS
-
-storefront 自行创建 emotion cache 并传入 `TrendyUIProvider`：
-
-```tsx
-// +onRenderHtml.tsx
-import createCache from '@emotion/cache';
-import { extractCriticalToChunks, createEmotionServer } from '@emotion/server';
-
-const cache = createCache({ key: 'css', prepend: true });
-// ...渲染后提取 critical CSS 注入 <head>
-```
-
-组件库不接管 SSR，不导出 SSR 工具函数。
 
 ---
 
@@ -298,11 +283,11 @@ const cache = createCache({ key: 'css', prepend: true });
 
 ## SEO 规范（Storefront）
 
-- SSR / SSG 页面禁止在模块作用域访问 `window` / `document`；需要时使用条件判断或 `useEffect`
+> **初始开发阶段为 CSR SPA，SEO 规范在引入 SSR/SSG 时生效。当前阶段以下为预备规范，编码时提前遵守以降低后续迁移成本。**
+
 - 标题层级（`h1`–`h6`）由页面消费方控制，不在组件内硬编码
 - `<img>` 必须提供 `alt`，不得为空字符串（装饰性图片除外，需显式 `alt=""`）
-- 不得通过 `suppressHydrationWarning` 掩盖 hydration 问题，必须修复根本原因
-- `+Head.tsx` 为每个 SSR / SSG 路由单独声明 `<title>` 和 `<meta name="description">`
+- 通过 `react-helmet-async` 或类似方案为每个路由声明 `<title>` 和 `<meta name="description">`（为后续 SSR 兼容做准备）
 
 ---
 
@@ -361,7 +346,7 @@ const cache = createCache({ key: 'css', prepend: true });
 
 ```
 services:
-  storefront       # Vike Node.js SSR server
+  storefront       # Nginx 静态文件服务（Vite 构建产物，CSR SPA）
   dashboard        # Nginx 静态文件服务（Vite 构建产物）
   api              # Express API server
   worker           # BullMQ Worker（独立进程）
@@ -419,7 +404,7 @@ pnpm install
 
 **注意事项：**
 - ui-library 每次修改后需重新执行 `pnpm build`，link 本身不会热更新
-- storefront 的 Vike dev server 需重启才能感知重新构建的产物
+- storefront 的 Vite dev server 需重启才能感知重新构建的产物
 - 联调完成后务必及时 `unlink`，避免意外引用本地路径
 
 ---
