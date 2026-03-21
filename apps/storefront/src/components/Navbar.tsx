@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
-import ShoppingBagOutlinedIcon from '@mui/icons-material/ShoppingBagOutlined';
-import PersonOutlineIcon from '@mui/icons-material/PersonOutline';
+import {ShoppingBagOutlined as ShoppingBagOutlinedIcon} from '@mui/icons-material';
+import {PersonOutline as PersonOutlineIcon} from '@mui/icons-material';
 import { useCart } from '../contexts/CartContext';
 
 const NAV_LINKS = [

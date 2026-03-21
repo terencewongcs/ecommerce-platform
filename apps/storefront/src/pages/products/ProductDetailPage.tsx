@@ -6,16 +6,76 @@ import ProductImages from '../../components/ProductImages';
 import ProductInfo from '../../components/ProductInfo';
 import AddToCartButton from '../../components/AddToCartButton';
 import ProductGrid from '../../components/ProductGrid';
-import { getProductBySlug, PRODUCTS } from '../../data/products';
+import { useProduct, useProducts } from '../../hooks/useProducts';
+import { toStaticProduct, type ApiProduct } from '../../lib/apiTypes';
+
+// Sub-component: fetches and renders related products from the same category
+function RelatedProducts({ category, excludeSlug }: { category: string; excludeSlug: string }) {
+  const { data } = useProducts({ category, limit: 4 });
+  const related = (data?.products as ApiProduct[] ?? [])
+    .filter((p) => p.slug !== excludeSlug)
+    .slice(0, 3)
+    .map(toStaticProduct);
+
+  if (related.length === 0) return null;
+
+  return (
+    <section className="bg-brand-surface py-16">
+      <div className="max-w-7xl mx-auto px-6">
+        <div className="text-center mb-10">
+          <p className="text-[10px] tracking-[0.3em] uppercase text-brand-gold mb-2">You May Also Like</p>
+          <h2 className="text-2xl font-light text-brand-black">Related Products</h2>
+        </div>
+        <ProductGrid products={related} />
+      </div>
+    </section>
+  );
+}
 
 export default function ProductDetailPage() {
   const { slug } = useParams<{ slug: string }>();
-  const product = getProductBySlug(slug ?? '');
+  const { data, isLoading, isError } = useProduct(slug ?? '');
 
   const [selectedSize, setSelectedSize] = useState<string | null>(null);
   const [showSizeError, setShowSizeError] = useState(false);
 
-  if (!product) {
+  function handleSizeSelect(size: string) {
+    setSelectedSize(size);
+    setShowSizeError(false);
+  }
+
+  function handleNoSizeSelected() {
+    setShowSizeError(true);
+    document.getElementById('size-selector')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
+
+  // Loading state
+  if (isLoading) {
+    return (
+      <>
+        <Navbar />
+        <main className="pt-16 bg-white animate-pulse">
+          <div className="max-w-7xl mx-auto px-6 py-4">
+            <div className="h-2 bg-brand-surface rounded w-48" />
+          </div>
+          <div className="max-w-7xl mx-auto px-6 pb-16">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
+              <div className="aspect-[3/4] bg-brand-surface" />
+              <div className="space-y-4 pt-4">
+                <div className="h-2 bg-brand-surface rounded w-1/4" />
+                <div className="h-6 bg-brand-surface rounded w-3/4" />
+                <div className="h-4 bg-brand-surface rounded w-1/3" />
+              </div>
+            </div>
+          </div>
+        </main>
+        <Footer />
+      </>
+    );
+  }
+
+  // Not found or error state
+  if (isError || !data?.product) {
     return (
       <>
         <Navbar />
@@ -37,22 +97,8 @@ export default function ProductDetailPage() {
     );
   }
 
-  function handleSizeSelect(size: string) {
-    setSelectedSize(size);
-    setShowSizeError(false);
-  }
-
-  function handleNoSizeSelected() {
-    setShowSizeError(true);
-    // Scroll to size selector so the user sees the error
-    document.getElementById('size-selector')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-  }
-
-  // Related products: same first category, excluding the current one
+  const product = toStaticProduct(data.product as ApiProduct);
   const relatedCategory = product.category[0] ?? 'women';
-  const related = PRODUCTS.filter(
-    (p) => p.id !== product.id && p.category.includes(relatedCategory),
-  ).slice(0, 3);
 
   return (
     <>
@@ -103,17 +149,7 @@ export default function ProductDetailPage() {
         </div>
 
         {/* Related products */}
-        {related.length > 0 && (
-          <section className="bg-brand-surface py-16">
-            <div className="max-w-7xl mx-auto px-6">
-              <div className="text-center mb-10">
-                <p className="text-[10px] tracking-[0.3em] uppercase text-brand-gold mb-2">You May Also Like</p>
-                <h2 className="text-2xl font-light text-brand-black">Related Products</h2>
-              </div>
-              <ProductGrid products={related} />
-            </div>
-          </section>
-        )}
+        <RelatedProducts category={relatedCategory} excludeSlug={slug ?? ''} />
 
       </main>
       <Footer />

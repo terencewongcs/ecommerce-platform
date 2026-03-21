@@ -257,6 +257,11 @@ trendyuniquellc/ecommerce-platform/
 - 每个模块导出类型时使用 `export type`，避免运行时副作用
 - API 路由的 Request / Response 类型统一从 `packages/types` 导入
 
+### 导入规范
+
+优先使用 barrel import，禁止使用深度路径导入
+
+
 ### 环境变量
 
 - 所有环境变量通过 Zod schema 在启动时验证，缺失或格式错误立即 fail-fast

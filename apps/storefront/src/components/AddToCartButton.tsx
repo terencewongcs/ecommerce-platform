@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import ShoppingBagOutlinedIcon from '@mui/icons-material/ShoppingBagOutlined';
-import CheckIcon from '@mui/icons-material/Check';
+import {ShoppingBagOutlined as ShoppingBagOutlinedIcon} from '@mui/icons-material';
+import {Check as CheckIcon} from '@mui/icons-material';
 import { useCart } from '../contexts/CartContext';
 import type { StaticProduct } from '../data/products';
 

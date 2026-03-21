@@ -186,10 +186,9 @@ router.post("/refresh", async (req: Request, res: Response) => {
   const newRefreshToken = signRefreshToken(user.id as string);
   const newRefreshHash = await bcrypt.hash(newRefreshToken, BCRYPT_ROUNDS);
 
-  await User.findByIdAndUpdate(user.id, {
-    $pull: { refreshTokenHashes: matchedHash },
-    $push: { refreshTokenHashes: newRefreshHash },
-  });
+  // MongoDB does not allow $pull and $push on the same field in one operation — split into two
+  await User.findByIdAndUpdate(user.id, { $pull: { refreshTokenHashes: matchedHash } });
+  await User.findByIdAndUpdate(user.id, { $push: { refreshTokenHashes: newRefreshHash } });
 
   const accessPayload: JwtAccessPayload = {
     sub: user.id as string,

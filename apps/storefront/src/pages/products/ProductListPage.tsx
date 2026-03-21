@@ -5,8 +5,9 @@ import Footer from '../../components/Footer';
 import ProductGrid from '../../components/ProductGrid';
 import FilterSidebar from '../../components/FilterSidebar';
 import SortSelect, { type SortOption } from '../../components/SortSelect';
-import { getProductsByCategory } from '../../data/products';
 import type { StaticProduct } from '../../data/products';
+import { useProducts } from '../../hooks/useProducts';
+import { toStaticProduct, type ApiProduct } from '../../lib/apiTypes';
 
 const CATEGORY_LABELS: Record<string, string> = {
   women: 'Women',
@@ -43,7 +44,7 @@ function applyFiltersAndSort(
   // Sort
   if (sort === 'price-asc') result.sort((a, b) => a.price - b.price);
   if (sort === 'price-desc') result.sort((a, b) => b.price - a.price);
-  // 'newest' and 'featured' keep the default order from the data file
+  // 'newest' and 'featured' keep the default order from the API (createdAt desc)
 
   return result;
 }
@@ -57,7 +58,13 @@ export default function ProductListPage() {
   const [selectedPriceRange, setSelectedPriceRange] = useState<string | null>(null);
   const [sort, setSort] = useState<SortOption>('featured');
 
-  const base = useMemo(() => getProductsByCategory(category), [category]);
+  // Fetch all products for this category (max 100; client-side filter handles size/price)
+  const { data, isLoading } = useProducts({ category, limit: 100 });
+
+  const base = useMemo(
+    () => (data?.products as ApiProduct[] ?? []).map(toStaticProduct),
+    [data],
+  );
 
   const products = useMemo(
     () => applyFiltersAndSort(base, selectedSizes, selectedPriceRange, sort),
@@ -81,7 +88,9 @@ export default function ProductListPage() {
         <div className="bg-brand-surface py-12 text-center">
           <p className="text-[10px] tracking-[0.3em] uppercase text-brand-gold mb-2">Collection</p>
           <h1 className="text-3xl font-light text-brand-black">{label}</h1>
-          <p className="text-xs text-brand-slate mt-2">{products.length} items</p>
+          <p className="text-xs text-brand-slate mt-2">
+            {isLoading ? 'Loading…' : `${products.length} items`}
+          </p>
         </div>
 
         <div className="max-w-7xl mx-auto px-6 py-12 flex gap-10">
@@ -99,7 +108,22 @@ export default function ProductListPage() {
             <div className="flex justify-end mb-6">
               <SortSelect value={sort} onChange={setSort} />
             </div>
-            <ProductGrid products={products} />
+
+            {isLoading ? (
+              // Loading skeleton: 6 placeholder cards
+              <div className="grid grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-10">
+                {Array.from({ length: 6 }).map((_, i) => (
+                  <div key={i} className="animate-pulse">
+                    <div className="aspect-[3/4] bg-brand-surface mb-4" />
+                    <div className="h-2 bg-brand-surface rounded w-1/3 mb-2" />
+                    <div className="h-3 bg-brand-surface rounded w-2/3 mb-2" />
+                    <div className="h-2 bg-brand-surface rounded w-1/4" />
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <ProductGrid products={products} />
+            )}
           </div>
 
         </div>

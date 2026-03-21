@@ -11,10 +11,11 @@
     "clean": "rm -rf dist"
   },
   "dependencies": {
-    "@trendyuniquellc/types": "workspace:*",
     "@sentry/node": "^8.0.0",
+    "@trendyuniquellc/types": "workspace:*",
     "bcrypt": "^5.0.0",
     "bullmq": "^5.0.0",
+    "dotenv": "^17.3.1",
     "express": "^5.0.0",
     "ioredis": "^5.0.0",
     "jsonwebtoken": "^9.0.0",
