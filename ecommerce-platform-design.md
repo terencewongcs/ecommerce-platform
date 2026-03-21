@@ -257,24 +257,10 @@ trendyuniquellc/ecommerce-platform/
 - 每个模块导出类型时使用 `export type`，避免运行时副作用
 - API 路由的 Request / Response 类型统一从 `packages/types` 导入
 
-### MUI 导入规范
+### 导入规范
 
-优先使用 barrel import：
+优先使用 barrel import，禁止使用深度路径导入
 
-```tsx
-// ✅ 推荐
-import { Box, Button, Card, Grid } from "@mui/material";
-```
-
-禁止使用深度路径导入：
-
-```tsx
-// ❌ 禁止
-import Box from "@mui/material/Box";
-import Button from "@mui/material/Button";
-```
-
-**原因**：深度路径在 SSR 环境下，Node.js 可能解析到 MUI 的 CJS 版本，导致 ESM/CJS 混用问题。使用 barrel import 时，现代打包器（Vite）可正确处理 tree-shaking，并在引入 SSR 后保证走 ESM 路径。
 
 ### 环境变量
 

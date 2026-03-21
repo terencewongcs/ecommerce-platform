@@ -10,20 +10,7 @@
 7. 设计文档可能出错，在遇到矛盾时，先和Teri讨论。
 8. 在解决错误时遇到需要“打补丁”的操作时，比如增加约束，先调查错误的源头。优先用更优雅的方式解决，即使需要改动源头的文件。
 9. 所有组件单独写成一个文件，放到components文件夹里。
-10. 在这个项目里，MUI 优先这样写：
-
-    ```tsx
-    import { Box, Button, Card, Grid } from "@mui/material";
-    ```
-
-    尽量不要写：
-
-    ```tsx
-    import Box from "@mui/material/Box";
-    import Button from "@mui/material/Button";
-    ```
-
-11. 我是一个技术小白，操作每一步都告诉我：
+10. 我是一个技术小白，操作每一步都告诉我：
 
     - 这个命令是干什么的
     - 为什么要这么做
