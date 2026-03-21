@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom';
-import SearchIcon from '@mui/icons-material/Search';
+import {Search as SearchIcon} from '@mui/icons-material';
 
 export default function SearchBar() {
   const navigate = useNavigate();

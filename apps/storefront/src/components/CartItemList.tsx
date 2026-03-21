@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import CloseIcon from '@mui/icons-material/Close';
+import {Close as CloseIcon} from '@mui/icons-material';
 import { useCart } from '../contexts/CartContext';
 
 export default function CartItemList() {
