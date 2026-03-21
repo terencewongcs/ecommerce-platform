@@ -3,13 +3,28 @@ import { useSearchParams, Link } from 'react-router-dom';
 import Navbar from '../../components/Navbar';
 import Footer from '../../components/Footer';
 import ProductGrid from '../../components/ProductGrid';
-import { searchProducts } from '../../data/products';
+import { useProducts } from '../../hooks/useProducts';
+import { toStaticProduct, type ApiProduct } from '../../lib/apiTypes';
 
 export default function SearchResultsPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const query = searchParams.get('q') ?? '';
 
-  const results = useMemo(() => (query.trim() ? searchProducts(query) : []), [query]);
+  // Fetch all products and filter client-side (backend has no search endpoint yet)
+  const { data, isLoading } = useProducts({ limit: 100 });
+
+  const results = useMemo(() => {
+    if (!query.trim() || !data) return [];
+    const q = query.toLowerCase();
+    return (data.products as ApiProduct[])
+      .filter(
+        (p) =>
+          p.name.toLowerCase().includes(q) ||
+          p.brand.toLowerCase().includes(q) ||
+          p.description.toLowerCase().includes(q),
+      )
+      .map(toStaticProduct);
+  }, [query, data]);
 
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -47,11 +62,26 @@ export default function SearchResultsPage() {
           {query ? (
             <>
               <p className="text-xs text-brand-slate tracking-wide mb-8">
-                {results.length === 0
+                {isLoading
+                  ? 'Searching…'
+                  : results.length === 0
                   ? `No results for "${query}"`
                   : `${results.length} result${results.length !== 1 ? 's' : ''} for "${query}"`}
               </p>
-              {results.length === 0 ? (
+
+              {isLoading ? (
+                // Loading skeleton
+                <div className="grid grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-10">
+                  {Array.from({ length: 6 }).map((_, i) => (
+                    <div key={i} className="animate-pulse">
+                      <div className="aspect-[3/4] bg-brand-surface mb-4" />
+                      <div className="h-2 bg-brand-surface rounded w-1/3 mb-2" />
+                      <div className="h-3 bg-brand-surface rounded w-2/3 mb-2" />
+                      <div className="h-2 bg-brand-surface rounded w-1/4" />
+                    </div>
+                  ))}
+                </div>
+              ) : results.length === 0 ? (
                 <div className="text-center py-16">
                   <p className="text-brand-slate text-sm tracking-widest uppercase mb-6">
                     We couldn't find what you're looking for
