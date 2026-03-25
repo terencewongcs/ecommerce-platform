@@ -7,6 +7,8 @@ import SearchResultsPage from './pages/search/SearchResultsPage';
 import CheckoutPage from './pages/checkout/CheckoutPage';
 import LoginPage from './pages/auth/LoginPage';
 import SignupPage from './pages/auth/SignupPage';
+import AccountPage from './pages/account/AccountPage';
+import ResetPasswordPage from './pages/account/ResetPasswordPage';
 
 export default function App() {
   return (
@@ -26,6 +28,8 @@ export default function App() {
       <Route path="/checkout" element={<CheckoutPage />} />
       <Route path="/auth/login" element={<LoginPage />} />
       <Route path="/auth/signup" element={<SignupPage />} />
+      <Route path="/account" element={<AccountPage />} />
+      <Route path="/account/reset-password" element={<ResetPasswordPage />} />
     </Routes>
   );
 }

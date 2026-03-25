@@ -20,6 +20,7 @@
     "ioredis": "^5.0.0",
     "jsonwebtoken": "^9.0.0",
     "mongoose": "^8.0.0",
+    "resend": "^6.9.4",
     "zod": "^3.0.0"
   },
   "devDependencies": {

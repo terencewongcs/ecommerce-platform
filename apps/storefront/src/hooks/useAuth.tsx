@@ -52,6 +52,8 @@ interface AuthContextValue {
   login: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
   signup: (email: string, password: string, firstName: string, lastName: string) => Promise<void>;
+  /** Update the cached user profile after a successful profile edit */
+  updateProfile: (updates: Partial<Pick<AuthUser, 'firstName' | 'lastName'>>) => void;
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -188,6 +190,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     [],
   );
 
+  const updateProfile = useCallback(
+    (updates: Partial<Pick<AuthUser, 'firstName' | 'lastName'>>) => {
+      setUser((prev) => {
+        if (!prev) return prev;
+        const updated = { ...prev, ...updates };
+        cacheUserProfile(updated);
+        return updated;
+      });
+    },
+    [],
+  );
+
   return (
     <AuthContext.Provider
       value={{
@@ -197,6 +211,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         login,
         logout,
         signup,
+        updateProfile,
       }}
     >
       {children}

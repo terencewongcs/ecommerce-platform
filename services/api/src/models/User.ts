@@ -8,6 +8,9 @@ export interface IUser extends Document {
   role: "customer" | "admin" | "vendor";
   // Hashed refresh tokens stored here to allow revocation per-device
   refreshTokenHashes: string[];
+  // Password reset token (SHA-256 hash) and its expiry
+  passwordResetTokenHash: string | null;
+  passwordResetExpiry: Date | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -26,6 +29,9 @@ const UserSchema = new Schema<IUser>(
     lastName: { type: String, required: true, trim: true },
     role: { type: String, enum: ["customer", "admin", "vendor"], default: "customer" },
     refreshTokenHashes: { type: [String], default: [] },
+    // select: false — never returned in API responses unless explicitly requested
+    passwordResetTokenHash: { type: String, default: null, select: false },
+    passwordResetExpiry: { type: Date, default: null, select: false },
   },
   { timestamps: true },
 );

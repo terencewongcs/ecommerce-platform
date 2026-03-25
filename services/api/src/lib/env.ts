@@ -17,6 +17,9 @@ const EnvSchema = z.object({
   CLOUDFLARE_R2_BUCKET_NAME: z.string().min(1),
   CLOUDFLARE_R2_PUBLIC_URL: z.string().url(),
   SENTRY_DSN: z.string().url().optional(),
+  RESEND_API_KEY: z.string().min(1).optional(),
+  RESEND_FROM_EMAIL: z.string().email().default("noreply@trendyunique.com"),
+  STOREFRONT_URL: z.string().url().default("http://localhost:3000"),
 });
 
 export const env = EnvSchema.parse(process.env);
