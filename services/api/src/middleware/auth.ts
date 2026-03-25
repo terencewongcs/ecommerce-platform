@@ -5,7 +5,7 @@ import { env } from "../lib/env.js";
 export interface JwtAccessPayload {
   sub: string;  // userId
   email: string;
-  role: "customer" | "admin";
+  role: "customer" | "admin" | "vendor";
 }
 
 // Attach the decoded token payload to every authenticated request
@@ -46,6 +46,19 @@ export function requireAdmin(req: Request, res: Response, next: NextFunction): v
   requireAuth(req, res, () => {
     if (req.user?.role !== "admin") {
       res.status(403).json({ error: "Admin access required" });
+      return;
+    }
+    next();
+  });
+}
+
+/**
+ * Same as requireAuth but also checks that the user has the vendor role.
+ */
+export function requireVendor(req: Request, res: Response, next: NextFunction): void {
+  requireAuth(req, res, () => {
+    if (req.user?.role !== "vendor") {
+      res.status(403).json({ error: "Vendor access required" });
       return;
     }
     next();

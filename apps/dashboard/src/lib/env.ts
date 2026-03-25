@@ -5,4 +5,4 @@ const EnvSchema = z.object({
   VITE_SENTRY_DSN: z.string().url().optional(),
 });
 
-export const env = EnvSchema.parse(import.meta.env);
+export const clientEnv = EnvSchema.parse(import.meta.env);
