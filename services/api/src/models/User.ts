@@ -5,7 +5,7 @@ export interface IUser extends Document {
   passwordHash: string;
   firstName: string;
   lastName: string;
-  role: "customer" | "admin";
+  role: "customer" | "admin" | "vendor";
   // Hashed refresh tokens stored here to allow revocation per-device
   refreshTokenHashes: string[];
   createdAt: Date;
@@ -24,7 +24,7 @@ const UserSchema = new Schema<IUser>(
     passwordHash: { type: String, required: true },
     firstName: { type: String, required: true, trim: true },
     lastName: { type: String, required: true, trim: true },
-    role: { type: String, enum: ["customer", "admin"], default: "customer" },
+    role: { type: String, enum: ["customer", "admin", "vendor"], default: "customer" },
     refreshTokenHashes: { type: [String], default: [] },
   },
   { timestamps: true },

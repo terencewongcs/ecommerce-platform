@@ -2,6 +2,8 @@ import express, { type Express, type Request, type Response, type NextFunction }
 import { env } from "./lib/env.js";
 import authRouter from "./routes/auth.js";
 import productsRouter from "./routes/products.js";
+import adminRouter from "./routes/admin.js";
+import vendorRouter from "./routes/vendor.js";
 
 const app: Express = express();
 
@@ -28,7 +30,7 @@ app.use((req: Request, _res: Response, next: NextFunction) => {
 const ALLOWED_ORIGINS =
   env.NODE_ENV === "production"
     ? ["https://trendyunique.com"] // replace with real domain at launch
-    : ["http://localhost:3000", "http://localhost:5173"];
+    : ["http://localhost:3000", "http://localhost:5173", "http://localhost:3002"];
 
 app.use((req: Request, res: Response, next: NextFunction) => {
   const origin = req.headers.origin ?? "";
@@ -49,6 +51,8 @@ app.use((req: Request, res: Response, next: NextFunction) => {
 
 app.use("/auth", authRouter);
 app.use("/products", productsRouter);
+app.use("/admin", adminRouter);
+app.use("/vendor", vendorRouter);
 
 // Health check — useful for deployment readiness probes
 app.get("/health", (_req: Request, res: Response) => {
