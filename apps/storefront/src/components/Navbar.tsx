@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom';
 import {ShoppingBagOutlined as ShoppingBagOutlinedIcon} from '@mui/icons-material';
-import {PersonOutline as PersonOutlineIcon} from '@mui/icons-material';
 import { useCart } from '../contexts/CartContext';
+import UserMenu from './UserMenu';
 
 const NAV_LINKS = [
   { label: 'Women', to: '/women' },
@@ -38,13 +38,7 @@ export default function Navbar() {
 
         {/* Icons */}
         <div className="flex items-center gap-3">
-          <Link
-            to="/auth/login"
-            aria-label="My account"
-            className="p-1 text-brand-slate hover:text-brand-black transition-colors duration-200"
-          >
-            <PersonOutlineIcon fontSize="small" />
-          </Link>
+          <UserMenu />
           <Link
             to="/cart"
             aria-label="Shopping bag"
