@@ -5,6 +5,7 @@ import productsRouter from "./routes/products.js";
 import adminRouter from "./routes/admin.js";
 import vendorRouter from "./routes/vendor.js";
 import accountRouter from "./routes/account.js";
+import cartRouter from "./routes/cart.js";
 
 const app: Express = express();
 
@@ -55,6 +56,7 @@ app.use("/products", productsRouter);
 app.use("/admin", adminRouter);
 app.use("/vendor", vendorRouter);
 app.use("/account", accountRouter);
+app.use("/cart", cartRouter);
 
 // Health check — useful for deployment readiness probes
 app.get("/health", (_req: Request, res: Response) => {

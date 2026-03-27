@@ -21,15 +21,15 @@ export default function CartItemList() {
 
   return (
     <ul className="divide-y divide-brand-surface">
-      {items.map(({ product, size, quantity }) => (
-        <li key={`${product.id}-${size}`} className="py-6 flex gap-5">
+      {items.map((item) => (
+        <li key={`${item.productId}-${item.size}`} className="py-6 flex gap-5">
 
           {/* Colour swatch as image placeholder */}
           <Link
-            to={`/products/${product.slug}`}
+            to={`/products/${item.slug}`}
             className="flex-shrink-0 w-24 h-32 block"
-            style={{ backgroundColor: product.bg }}
-            aria-label={product.name}
+            style={{ backgroundColor: item.bg }}
+            aria-label={item.name}
           />
 
           {/* Item details */}
@@ -37,19 +37,19 @@ export default function CartItemList() {
             <div className="flex justify-between items-start">
               <div>
                 <p className="text-[10px] tracking-[0.2em] uppercase text-brand-slate mb-1">
-                  {product.brand}
+                  {item.brand}
                 </p>
                 <Link
-                  to={`/products/${product.slug}`}
+                  to={`/products/${item.slug}`}
                   className="text-sm font-medium text-brand-black hover:text-brand-gold transition-colors duration-150"
                 >
-                  {product.name}
+                  {item.name}
                 </Link>
-                <p className="text-xs text-brand-slate mt-1">Size: {size}</p>
+                <p className="text-xs text-brand-slate mt-1">Size: {item.size}</p>
               </div>
               <button
-                onClick={() => removeItem(product.id, size)}
-                aria-label={`Remove ${product.name}`}
+                onClick={() => removeItem(item.productId, item.size)}
+                aria-label={`Remove ${item.name}`}
                 className="p-1 text-brand-slate hover:text-brand-black transition-colors duration-150"
               >
                 <CloseIcon fontSize="small" />
@@ -60,22 +60,22 @@ export default function CartItemList() {
               {/* Quantity stepper */}
               <div className="flex items-center border border-brand-surface">
                 <button
-                  onClick={() => updateQuantity(product.id, size, quantity - 1)}
+                  onClick={() => updateQuantity(item.productId, item.size, item.quantity - 1)}
                   className="w-8 h-8 text-brand-slate hover:text-brand-black transition-colors duration-150"
                   aria-label="Decrease quantity"
                 >
                   −
                 </button>
-                <span className="w-8 text-center text-sm text-brand-black">{quantity}</span>
+                <span className="w-8 text-center text-sm text-brand-black">{item.quantity}</span>
                 <button
-                  onClick={() => updateQuantity(product.id, size, quantity + 1)}
+                  onClick={() => updateQuantity(item.productId, item.size, item.quantity + 1)}
                   className="w-8 h-8 text-brand-slate hover:text-brand-black transition-colors duration-150"
                   aria-label="Increase quantity"
                 >
                   +
                 </button>
               </div>
-              <p className="text-sm text-brand-black">${product.price * quantity}</p>
+              <p className="text-sm text-brand-black">${item.price * item.quantity}</p>
             </div>
           </div>
 
