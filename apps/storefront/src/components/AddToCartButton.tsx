@@ -19,7 +19,16 @@ export default function AddToCartButton({ product, selectedSize, onNoSizeSelecte
       onNoSizeSelected();
       return;
     }
-    addItem(product, selectedSize);
+    // Build the flat cart item from the product and selected size
+    addItem({
+      productId: product.id,
+      slug: product.slug,
+      name: product.name,
+      brand: product.brand,
+      price: product.price,
+      bg: product.bg,
+      size: selectedSize,
+    });
     setAdded(true);
     // Reset the "Added" state after 2 seconds
     setTimeout(() => setAdded(false), 2000);
@@ -28,9 +37,9 @@ export default function AddToCartButton({ product, selectedSize, onNoSizeSelecte
   return (
     <button
       onClick={handleClick}
-      className={`w-full py-4 flex items-center justify-center gap-3 text-xs tracking-[0.25em] uppercase transition-colors duration-200 ${
+      className={`w-full py-4 flex items-center justify-center gap-3 text-xs tracking-[0.25em] uppercase transition-all duration-300 ${
         added
-          ? 'bg-brand-gold text-brand-black border border-brand-gold'
+          ? 'bg-brand-gold text-brand-black border border-brand-gold scale-[0.98]'
           : 'bg-brand-black text-brand-ivory hover:bg-brand-black/90 border border-brand-black'
       }`}
     >
