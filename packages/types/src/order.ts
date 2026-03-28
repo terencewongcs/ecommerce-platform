@@ -1,11 +1,15 @@
 import { z } from "zod";
 
 export const OrderStatusSchema = z.enum([
-  "pending",
-  "confirmed",
+  "pending_payment",
+  "paid",
+  "processing",
   "shipped",
   "delivered",
+  "completed",
   "cancelled",
+  "refund_requested",
+  "refunded",
 ]);
 export type OrderStatus = z.infer<typeof OrderStatusSchema>;
 
@@ -39,7 +43,18 @@ export const ApiOrderSchema = z.object({
   tax: z.number(),
   shippingCost: z.number(),
   total: z.number(),
+  stripePaymentIntentId: z.string(),
+  trackingNumber: z.string().optional(),
+  carrier: z.string().optional(),
+  shippedAt: z.string().datetime().optional(),
+  refundReason: z.string().optional(),
   createdAt: z.string().datetime(),
   updatedAt: z.string().datetime(),
 });
 export type ApiOrder = z.infer<typeof ApiOrderSchema>;
+
+export const CreateOrderSchema = z.object({
+  shippingAddress: ApiShippingAddressSchema,
+  idempotencyKey: z.string().uuid(),
+});
+export type CreateOrderInput = z.infer<typeof CreateOrderSchema>;

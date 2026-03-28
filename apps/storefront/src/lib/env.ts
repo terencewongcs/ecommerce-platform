@@ -8,6 +8,7 @@ const optionalUrl = z.preprocess(
 const ClientEnvSchema = z.object({
   VITE_API_URL: z.string().url(),
   VITE_SENTRY_DSN: optionalUrl,
+  VITE_STRIPE_PUBLISHABLE_KEY: z.string().startsWith('pk_'),
 });
 
 export const clientEnv = ClientEnvSchema.parse(import.meta.env);

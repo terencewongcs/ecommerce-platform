@@ -27,16 +27,20 @@ import { useAuth } from '../../hooks/useAuth';
 import type { ApiOrder, OrderStatus } from '../../lib/apiTypes';
 
 const STATUS_COLOR: Record<OrderStatus, 'default' | 'warning' | 'info' | 'primary' | 'success' | 'error'> = {
-  pending: 'warning',
-  confirmed: 'info',
-  shipped: 'primary',
-  delivered: 'success',
-  cancelled: 'error',
+  pending_payment:  'warning',
+  paid:             'info',
+  processing:       'info',
+  shipped:          'primary',
+  delivered:        'success',
+  completed:        'success',
+  cancelled:        'error',
+  refund_requested: 'warning',
+  refunded:         'default',
 };
 
-// Vendors cannot set orders back to "pending"
-const VENDOR_STATUS_OPTIONS: OrderStatus[] = ['confirmed', 'shipped', 'delivered', 'cancelled'];
-const ADMIN_STATUS_OPTIONS: OrderStatus[] = ['pending', 'confirmed', 'shipped', 'delivered', 'cancelled'];
+// Vendors can move orders forward and approve refunds; cancellation/payment states are system-managed
+const VENDOR_STATUS_OPTIONS: OrderStatus[] = ['processing', 'shipped', 'delivered', 'refunded'];
+const ADMIN_STATUS_OPTIONS: OrderStatus[] = ['pending_payment', 'paid', 'processing', 'shipped', 'delivered', 'completed', 'cancelled', 'refund_requested', 'refunded'];
 
 export default function OrderDetailPage() {
   const { id } = useParams<{ id: string }>();

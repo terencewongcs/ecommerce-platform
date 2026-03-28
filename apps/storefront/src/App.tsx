@@ -9,6 +9,7 @@ import LoginPage from './pages/auth/LoginPage';
 import SignupPage from './pages/auth/SignupPage';
 import AccountPage from './pages/account/AccountPage';
 import ResetPasswordPage from './pages/account/ResetPasswordPage';
+import OrderConfirmationPage from './pages/orders/OrderConfirmationPage';
 
 export default function App() {
   return (
@@ -30,6 +31,7 @@ export default function App() {
       <Route path="/auth/signup" element={<SignupPage />} />
       <Route path="/account" element={<AccountPage />} />
       <Route path="/account/reset-password" element={<ResetPasswordPage />} />
+      <Route path="/orders/:orderId" element={<OrderConfirmationPage />} />
     </Routes>
   );
 }

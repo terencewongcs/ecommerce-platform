@@ -195,7 +195,11 @@ router.get("/orders/:id", requireAdmin, async (req: Request, res: Response) => {
 // ── PATCH /admin/orders/:id/status ────────────────────────────────────────────
 
 const UpdateOrderStatusSchema = z.object({
-  status: z.enum(["pending", "confirmed", "shipped", "delivered", "cancelled"]),
+  status: z.enum([
+    "pending_payment", "paid", "processing", "shipped",
+    "delivered", "completed", "cancelled",
+    "refund_requested", "refunded",
+  ]),
 });
 
 router.patch("/orders/:id/status", requireAdmin, async (req: Request, res: Response) => {

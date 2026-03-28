@@ -3,7 +3,10 @@ import { z } from "zod";
 import mongoose from "mongoose";
 import { Product } from "../models/Product.js";
 import { Order } from "../models/Order.js";
+import { User } from "../models/User.js";
 import { requireVendor } from "../middleware/auth.js";
+import { stripe } from "../lib/stripe.js";
+import { sendRefundConfirmationEmail } from "../lib/email.js";
 
 const router: RouterType = Router();
 
@@ -144,10 +147,19 @@ router.get("/orders", requireVendor, async (req: Request, res: Response) => {
 
 // ── PATCH /vendor/orders/:id/status ──────────────────────────────────────────
 
-const UpdateOrderStatusSchema = z.object({
-  // Vendors cannot set orders back to "pending"
-  status: z.enum(["confirmed", "shipped", "delivered", "cancelled"]),
-});
+const UpdateOrderStatusSchema = z
+  .object({
+    // Vendors can only move orders forward; cancellation and refund approval have dedicated routes
+    status: z.enum(["processing", "shipped", "delivered", "refunded"]),
+    // Required when status is "shipped"
+    trackingNumber: z.string().min(1).optional(),
+    carrier: z.string().min(1).optional(),
+  })
+  .refine(
+    (data) =>
+      data.status !== "shipped" || (Boolean(data.trackingNumber) && Boolean(data.carrier)),
+    { message: "trackingNumber and carrier are required when status is shipped" },
+  );
 
 router.patch("/orders/:id/status", requireVendor, async (req: Request, res: Response) => {
   const parsed = UpdateOrderStatusSchema.safeParse(req.body);
@@ -161,23 +173,69 @@ router.patch("/orders/:id/status", requireVendor, async (req: Request, res: Resp
     vendorId: new mongoose.Types.ObjectId(req.user!.sub),
   }).distinct("_id");
 
-  const exists = await Order.exists({
+  const order = await Order.findOne({
     _id: req.params.id,
     "items.productId": { $in: vendorProductIds },
   });
 
-  if (!exists) {
+  if (!order) {
     res.status(404).json({ error: "Order not found" });
     return;
   }
 
-  const order = await Order.findByIdAndUpdate(
+  const { status, trackingNumber, carrier } = parsed.data;
+
+  // ── refunded: call Stripe Refund API before updating DB ──────────────────
+  if (status === "refunded") {
+    if (order.status !== "refund_requested") {
+      res.status(409).json({ error: "Order must be in refund_requested status to approve refund" });
+      return;
+    }
+
+    try {
+      await stripe.refunds.create({ payment_intent: order.stripePaymentIntentId });
+    } catch (stripeErr) {
+      console.error("[vendor] Stripe refund creation failed:", stripeErr);
+      res.status(502).json({ error: "Stripe refund failed" });
+      return;
+    }
+
+    order.status = "refunded";
+    await order.save();
+
+    try {
+      const user = await User.findById(order.userId).lean();
+      if (user) {
+        await sendRefundConfirmationEmail(
+          user.email,
+          user.firstName,
+          order._id.toString(),
+          order.refundReason ?? "",
+        );
+      }
+    } catch (emailErr) {
+      console.error("[vendor] Failed to send refund confirmation email:", emailErr);
+    }
+
+    res.json({ order });
+    return;
+  }
+
+  // ── shipped: write tracking info + shippedAt ─────────────────────────────
+  const update: Record<string, unknown> = { status };
+  if (status === "shipped") {
+    update.trackingNumber = trackingNumber;
+    update.carrier = carrier;
+    update.shippedAt = new Date();
+  }
+
+  const updatedOrder = await Order.findByIdAndUpdate(
     req.params.id,
-    { status: parsed.data.status },
+    { $set: update },
     { new: true },
   ).lean();
 
-  res.json({ order });
+  res.json({ order: updatedOrder });
 });
 
 export default router;
