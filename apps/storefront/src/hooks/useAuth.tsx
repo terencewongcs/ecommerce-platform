@@ -36,13 +36,7 @@ interface AuthApiResponse {
 
 interface RefreshApiResponse {
   accessToken: string;
-}
-
-/** Minimal info decoded from the JWT payload — server already verified the signature */
-interface JwtPayload {
-  sub: string;
-  email: string;
-  role: 'customer' | 'admin';
+  user: ApiUser;
 }
 
 interface AuthContextValue {
@@ -58,28 +52,6 @@ interface AuthContextValue {
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-const USER_CACHE_KEY = 'auth_user_profile';
-
-/** Stores the user profile in sessionStorage so it survives page refreshes.
- *  Only display info (name, role) — NOT the access token. */
-function cacheUserProfile(user: AuthUser): void {
-  sessionStorage.setItem(USER_CACHE_KEY, JSON.stringify(user));
-}
-
-function getCachedUserProfile(): AuthUser | null {
-  const raw = sessionStorage.getItem(USER_CACHE_KEY);
-  if (!raw) return null;
-  try {
-    return JSON.parse(raw) as AuthUser;
-  } catch {
-    return null;
-  }
-}
-
-function clearCachedUserProfile(): void {
-  sessionStorage.removeItem(USER_CACHE_KEY);
-}
-
 function mapApiUser(apiUser: ApiUser): AuthUser {
   return {
     id: apiUser._id,
@@ -88,15 +60,6 @@ function mapApiUser(apiUser: ApiUser): AuthUser {
     lastName: apiUser.lastName,
     role: apiUser.role,
   };
-}
-
-/** Base64url -> Base64 -> JSON decode, without signature verification.
- *  Safe to use client-side: the server already validated the signature. */
-function decodeJwtPayload(token: string): JwtPayload {
-  const segment = token.split('.')[1] ?? '';
-  // Pad to a multiple of 4 as required by atob
-  const padded = segment.padEnd(segment.length + ((4 - (segment.length % 4)) % 4), '=');
-  return JSON.parse(atob(padded.replace(/-/g, '+').replace(/_/g, '/'))) as JwtPayload;
 }
 
 // ── Context ───────────────────────────────────────────────────────────────────
@@ -114,7 +77,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const handleExpired = () => {
       setUser(null);
-      clearCachedUserProfile();
     };
     window.addEventListener('session:expired', handleExpired);
     return () => window.removeEventListener('session:expired', handleExpired);
@@ -134,15 +96,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
         const data = (await res.json()) as RefreshApiResponse;
         setAccessToken(data.accessToken);
-
-        // Prefer the cached profile (has firstName/lastName) over JWT payload (has only sub/email/role)
-        const cached = getCachedUserProfile();
-        if (cached) {
-          setUser(cached);
-        } else {
-          const payload = decodeJwtPayload(data.accessToken);
-          setUser({ id: payload.sub, email: payload.email, firstName: '', lastName: '', role: payload.role });
-        }
+        setUser(mapApiUser(data.user));
       })
       .catch(() => {
         // Network error or no cookie — stay logged out, no action needed
@@ -160,7 +114,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
     const mapped = mapApiUser(data.user);
     setAccessToken(data.accessToken);
-    cacheUserProfile(mapped);
     setUser(mapped);
   }, []);
 
@@ -170,7 +123,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } finally {
       // Always clear local state even if the server request fails
       setAccessToken(null);
-      clearCachedUserProfile();
       setUser(null);
     }
   }, []);
@@ -184,7 +136,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       });
       const mapped = mapApiUser(data.user);
       setAccessToken(data.accessToken);
-      cacheUserProfile(mapped);
       setUser(mapped);
     },
     [],
@@ -194,9 +145,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     (updates: Partial<Pick<AuthUser, 'firstName' | 'lastName'>>) => {
       setUser((prev) => {
         if (!prev) return prev;
-        const updated = { ...prev, ...updates };
-        cacheUserProfile(updated);
-        return updated;
+        return { ...prev, ...updates };
       });
     },
     [],
