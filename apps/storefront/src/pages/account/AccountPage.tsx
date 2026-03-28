@@ -1,15 +1,12 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { UpdateProfileSchema, type UpdateProfileInput } from '@trendyuniquellc/types';
 import Navbar from '../../components/Navbar';
 import Footer from '../../components/Footer';
 import { useAuth } from '../../hooks/useAuth';
 import { apiFetch } from '../../lib/apiClient';
-
-type ProfileFormValues = {
-  firstName: string;
-  lastName: string;
-};
 
 export default function AccountPage() {
   const navigate = useNavigate();
@@ -29,14 +26,15 @@ export default function AccountPage() {
     register,
     handleSubmit,
     formState: { errors, isSubmitting },
-  } = useForm<ProfileFormValues>({
+  } = useForm<UpdateProfileInput>({
+    resolver: zodResolver(UpdateProfileSchema),
     values: {
       firstName: user?.firstName ?? '',
       lastName: user?.lastName ?? '',
     },
   });
 
-  async function onProfileSubmit({ firstName, lastName }: ProfileFormValues) {
+  async function onProfileSubmit({ firstName, lastName }: UpdateProfileInput) {
     setProfileSuccess(false);
     setProfileError('');
     try {
@@ -102,7 +100,7 @@ export default function AccountPage() {
                     First Name
                   </label>
                   <input
-                    {...register('firstName', { required: 'Required' })}
+                    {...register('firstName')}
                     type="text"
                     className="w-full border border-brand-surface bg-white px-4 py-3 text-sm text-brand-black focus:outline-none focus:border-brand-black"
                   />
@@ -115,7 +113,7 @@ export default function AccountPage() {
                     Last Name
                   </label>
                   <input
-                    {...register('lastName', { required: 'Required' })}
+                    {...register('lastName')}
                     type="text"
                     className="w-full border border-brand-surface bg-white px-4 py-3 text-sm text-brand-black focus:outline-none focus:border-brand-black"
                   />

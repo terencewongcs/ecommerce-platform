@@ -1,26 +1,12 @@
 import { Router, type Router as RouterType, type Request, type Response } from "express";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
-import { z } from "zod";
+import { RegisterSchema, LoginSchema } from "@trendyuniquellc/types";
 import { User } from "../models/User.js";
 import { env } from "../lib/env.js";
 import type { JwtAccessPayload } from "../middleware/auth.js";
 
 const router: RouterType = Router();
-
-// ── Validation schemas ───────────────────────────────────────────────────────
-
-const RegisterSchema = z.object({
-  email: z.string().email(),
-  password: z.string().min(8),
-  firstName: z.string().min(1),
-  lastName: z.string().min(1),
-});
-
-const LoginSchema = z.object({
-  email: z.string().email(),
-  password: z.string().min(1),
-});
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 

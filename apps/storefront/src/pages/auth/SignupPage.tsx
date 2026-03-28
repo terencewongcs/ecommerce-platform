@@ -1,15 +1,10 @@
 import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
 import { Link, useNavigate } from 'react-router-dom';
+import { RegisterSchema, type RegisterInput } from '@trendyuniquellc/types';
 import Navbar from '../../components/Navbar';
 import Footer from '../../components/Footer';
 import { useAuth } from '../../hooks/useAuth';
-
-type FormValues = {
-  firstName: string;
-  lastName: string;
-  email: string;
-  password: string;
-};
 
 export default function SignupPage() {
   const navigate = useNavigate();
@@ -20,9 +15,9 @@ export default function SignupPage() {
     handleSubmit,
     setError,
     formState: { errors, isSubmitting },
-  } = useForm<FormValues>();
+  } = useForm<RegisterInput>({ resolver: zodResolver(RegisterSchema) });
 
-  async function onSubmit({ firstName, lastName, email, password }: FormValues) {
+  async function onSubmit({ firstName, lastName, email, password }: RegisterInput) {
     try {
       await signup(email, password, firstName, lastName);
       navigate('/');
@@ -47,34 +42,56 @@ export default function SignupPage() {
             <h1 className="text-2xl font-light text-brand-black">Create Account</h1>
           </div>
 
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4" noValidate>
             <div className="grid grid-cols-2 gap-4">
-              <input
-                {...register('firstName', { required: true })}
-                type="text"
-                placeholder="First name"
-                className="border border-brand-surface bg-white px-4 py-3 text-sm text-brand-black placeholder:text-brand-slate focus:outline-none focus:border-brand-black"
-              />
-              <input
-                {...register('lastName', { required: true })}
-                type="text"
-                placeholder="Last name"
-                className="border border-brand-surface bg-white px-4 py-3 text-sm text-brand-black placeholder:text-brand-slate focus:outline-none focus:border-brand-black"
-              />
+              <div>
+                <input
+                  {...register('firstName')}
+                  type="text"
+                  placeholder="First name"
+                  className="w-full border border-brand-surface bg-white px-4 py-3 text-sm text-brand-black placeholder:text-brand-slate focus:outline-none focus:border-brand-black"
+                />
+                {errors.firstName && (
+                  <p className="text-xs text-brand-rose mt-1">{errors.firstName.message}</p>
+                )}
+              </div>
+              <div>
+                <input
+                  {...register('lastName')}
+                  type="text"
+                  placeholder="Last name"
+                  className="w-full border border-brand-surface bg-white px-4 py-3 text-sm text-brand-black placeholder:text-brand-slate focus:outline-none focus:border-brand-black"
+                />
+                {errors.lastName && (
+                  <p className="text-xs text-brand-rose mt-1">{errors.lastName.message}</p>
+                )}
+              </div>
             </div>
-            <input
-              {...register('email', { required: true })}
-              type="email"
-              placeholder="Email address"
-              className="w-full border border-brand-surface bg-white px-4 py-3 text-sm text-brand-black placeholder:text-brand-slate focus:outline-none focus:border-brand-black"
-            />
-            <input
-              {...register('password', { required: true, minLength: 8 })}
-              type="password"
-              placeholder="Password"
-              className="w-full border border-brand-surface bg-white px-4 py-3 text-sm text-brand-black placeholder:text-brand-slate focus:outline-none focus:border-brand-black"
-            />
-            <p className="text-[10px] text-brand-slate">Must be at least 8 characters.</p>
+            <div>
+              <input
+                {...register('email')}
+                type="email"
+                placeholder="Email address"
+                className="w-full border border-brand-surface bg-white px-4 py-3 text-sm text-brand-black placeholder:text-brand-slate focus:outline-none focus:border-brand-black"
+              />
+              {errors.email && (
+                <p className="text-xs text-brand-rose mt-1">{errors.email.message}</p>
+              )}
+            </div>
+            <div>
+              <input
+                {...register('password')}
+                type="password"
+                placeholder="Password"
+                className="w-full border border-brand-surface bg-white px-4 py-3 text-sm text-brand-black placeholder:text-brand-slate focus:outline-none focus:border-brand-black"
+              />
+              {errors.password && (
+                <p className="text-xs text-brand-rose mt-1">{errors.password.message}</p>
+              )}
+              {!errors.password && (
+                <p className="text-[10px] text-brand-slate mt-1">Must be at least 8 characters.</p>
+              )}
+            </div>
 
             {/* Root-level error message (duplicate email, etc.) */}
             {errors.root && (

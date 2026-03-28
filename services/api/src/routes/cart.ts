@@ -1,25 +1,9 @@
 import { Router, type Router as RouterType, type Request, type Response } from "express";
-import { z } from "zod";
+import { UpdateCartSchema } from "@trendyuniquellc/types";
 import { Cart } from "../models/Cart.js";
 import { requireAuth } from "../middleware/auth.js";
 
 const router: RouterType = Router();
-
-// Validates each item in the cart payload
-const CartItemSchema = z.object({
-  productId: z.string().min(1),
-  slug: z.string().min(1),
-  name: z.string().min(1),
-  brand: z.string().min(1),
-  price: z.number().positive(),
-  bg: z.string().min(1),
-  size: z.string().min(1),
-  quantity: z.number().int().min(1),
-});
-
-const PutCartSchema = z.object({
-  items: z.array(CartItemSchema),
-});
 
 // ── GET /cart ────────────────────────────────────────────────────────────────
 // Returns the current user's cart. Returns empty items array if no cart exists yet.
@@ -34,7 +18,7 @@ router.get("/", requireAuth, async (req: Request, res: Response) => {
 // Upserts so the first save creates the document.
 
 router.put("/", requireAuth, async (req: Request, res: Response) => {
-  const parsed = PutCartSchema.safeParse(req.body);
+  const parsed = UpdateCartSchema.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: "Validation failed", details: parsed.error.flatten() });
     return;

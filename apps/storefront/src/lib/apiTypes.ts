@@ -1,7 +1,7 @@
 import type { StaticProduct, Category, ProductTag } from '../data/products';
 
-// Full shape of a product as returned by the API.
-// The shared @trendyuniquellc/types Product type is incomplete (missing brand, category, etc.)
+// ApiProduct uses _id (raw Mongoose response) rather than the domain id field.
+// Defined locally since it reflects the raw API wire format, not the shared domain type.
 export type ApiProduct = {
   _id?: string;
   id?: string;

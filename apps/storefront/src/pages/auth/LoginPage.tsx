@@ -1,13 +1,10 @@
 import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
 import { Link, useNavigate } from 'react-router-dom';
+import { LoginSchema, type LoginInput } from '@trendyuniquellc/types';
 import Navbar from '../../components/Navbar';
 import Footer from '../../components/Footer';
 import { useAuth } from '../../hooks/useAuth';
-
-type FormValues = {
-  email: string;
-  password: string;
-};
 
 export default function LoginPage() {
   const navigate = useNavigate();
@@ -18,9 +15,9 @@ export default function LoginPage() {
     handleSubmit,
     setError,
     formState: { errors, isSubmitting },
-  } = useForm<FormValues>();
+  } = useForm<LoginInput>({ resolver: zodResolver(LoginSchema) });
 
-  async function onSubmit({ email, password }: FormValues) {
+  async function onSubmit({ email, password }: LoginInput) {
     try {
       await login(email, password);
       navigate('/');
@@ -41,19 +38,29 @@ export default function LoginPage() {
             <h1 className="text-2xl font-light text-brand-black">Sign In</h1>
           </div>
 
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-            <input
-              {...register('email', { required: true })}
-              type="email"
-              placeholder="Email address"
-              className="w-full border border-brand-surface bg-white px-4 py-3 text-sm text-brand-black placeholder:text-brand-slate focus:outline-none focus:border-brand-black"
-            />
-            <input
-              {...register('password', { required: true })}
-              type="password"
-              placeholder="Password"
-              className="w-full border border-brand-surface bg-white px-4 py-3 text-sm text-brand-black placeholder:text-brand-slate focus:outline-none focus:border-brand-black"
-            />
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4" noValidate>
+            <div>
+              <input
+                {...register('email')}
+                type="email"
+                placeholder="Email address"
+                className="w-full border border-brand-surface bg-white px-4 py-3 text-sm text-brand-black placeholder:text-brand-slate focus:outline-none focus:border-brand-black"
+              />
+              {errors.email && (
+                <p className="text-xs text-brand-rose mt-1">{errors.email.message}</p>
+              )}
+            </div>
+            <div>
+              <input
+                {...register('password')}
+                type="password"
+                placeholder="Password"
+                className="w-full border border-brand-surface bg-white px-4 py-3 text-sm text-brand-black placeholder:text-brand-slate focus:outline-none focus:border-brand-black"
+              />
+              {errors.password && (
+                <p className="text-xs text-brand-rose mt-1">{errors.password.message}</p>
+              )}
+            </div>
 
             {/* Root-level error message (wrong credentials) */}
             {errors.root && (

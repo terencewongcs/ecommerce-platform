@@ -1,23 +1,13 @@
-import { createContext, useContext, useEffect, useReducer, useRef, type ReactNode } from 'react';
+import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiFetch } from '../lib/apiClient';
 import { useAuth } from '../hooks/useAuth';
 import { loadGuestCart, saveGuestCart, clearGuestCart } from '../lib/cartStorage';
 import type { AuthUser } from '../hooks/useAuth';
+import type { CartItem } from '@trendyuniquellc/types';
 
-// ── Types ────────────────────────────────────────────────────────────────────
-
-// Flat shape — all display fields stored directly so we don't need the full
-// StaticProduct object in localStorage or the database.
-export type CartItem = {
-  productId: string;
-  slug: string;
-  name: string;
-  brand: string;
-  price: number;
-  bg: string;
-  size: string;
-  quantity: number;
-};
+// Re-export so existing imports from this file continue to work.
+export type { CartItem };
 
 type CartState = {
   items: CartItem[];
@@ -30,6 +20,7 @@ type CartAction =
   | { type: 'CLEAR_CART' }
   | { type: 'SET_CART'; items: CartItem[] }; // full replace, used for DB sync and init
 
+// Pure reducer — used only to compute next state, not as a React state manager.
 function cartReducer(state: CartState, action: CartAction): CartState {
   switch (action.type) {
     case 'ADD_ITEM': {
@@ -120,12 +111,50 @@ function mergeItems(dbItems: CartItem[], guestItems: CartItem[]): CartItem[] {
 // ── Provider ─────────────────────────────────────────────────────────────────
 
 export function CartProvider({ children }: { children: ReactNode }) {
-  const [state, dispatch] = useReducer(cartReducer, { items: [] });
   const { user, isLoading } = useAuth();
+  const queryClient = useQueryClient();
 
   // Tracks the previous user value to detect login/logout transitions.
   // Initialized to `undefined` as a sentinel meaning "not yet seen any value".
   const prevUserRef = useRef<AuthUser | null | undefined>(undefined);
+
+  // Guest cart — only active when the user is not logged in.
+  const [guestItems, setGuestItems] = useState<CartItem[]>([]);
+
+  // ── Authenticated cart query ──────────────────────────────────────────────
+  // Only fires when auth has resolved and a user is logged in.
+  const cartQuery = useQuery({
+    queryKey: ['cart'],
+    queryFn: () => apiFetch<{ items: CartItem[] }>('/cart'),
+    enabled: !!user && !isLoading,
+  });
+
+  // ── Mutation for any authenticated cart change ────────────────────────────
+  // onMutate:   optimistically write to cache before the request
+  // onError:    roll back to previous cache if request fails
+  // onSettled:  re-fetch to guarantee server/client sync
+  const updateCartMutation = useMutation({
+    mutationFn: (items: CartItem[]) =>
+      apiFetch<{ items: CartItem[] }>('/cart', {
+        method: 'PUT',
+        body: JSON.stringify({ items }),
+      }),
+    onMutate: async (newItems) => {
+      // Cancel any in-flight refetch so it doesn't overwrite the optimistic update
+      await queryClient.cancelQueries({ queryKey: ['cart'] });
+      const prev = queryClient.getQueryData<{ items: CartItem[] }>(['cart']);
+      queryClient.setQueryData(['cart'], { items: newItems });
+      return { prev }; // returned as `context` to onError
+    },
+    onError: (_, __, ctx) => {
+      // Restore previous cart if the server rejects the mutation
+      queryClient.setQueryData(['cart'], ctx?.prev);
+    },
+    onSettled: () => {
+      // Always re-fetch to confirm actual server state
+      void queryClient.invalidateQueries({ queryKey: ['cart'] });
+    },
+  });
 
   // ── Cart initialisation & auth-transition handler ─────────────────────────
   useEffect(() => {
@@ -135,114 +164,107 @@ export function CartProvider({ children }: { children: ReactNode }) {
     prevUserRef.current = user;
 
     if (prevUser === undefined) {
-      // First time auth resolves — load the appropriate cart
-      if (user) {
-        // Logged in: fetch from DB
-        void apiFetch<{ items: CartItem[] }>('/cart')
-          .then((data) => dispatch({ type: 'SET_CART', items: data.items }))
-          .catch(() => {
-            // DB unreachable — start with an empty cart; next mutation will retry
-          });
-      } else {
+      // First time auth resolves
+      if (!user) {
         // Guest: load from localStorage
-        const guestItems = loadGuestCart();
-        if (guestItems.length > 0) {
-          dispatch({ type: 'SET_CART', items: guestItems });
-        }
+        setGuestItems(loadGuestCart());
       }
+      // Authenticated: cartQuery above handles fetching automatically
       return;
     }
 
     if (prevUser === null && user !== null) {
       // User just logged in — merge guest cart into DB cart
       void (async () => {
-        const guestItems = loadGuestCart();
+        const currentGuestItems = loadGuestCart();
 
+        // fetchQuery uses cache if fresh, otherwise fetches from server
         let dbItems: CartItem[] = [];
         try {
-          const data = await apiFetch<{ items: CartItem[] }>('/cart');
+          const data = await queryClient.fetchQuery({
+            queryKey: ['cart'],
+            queryFn: () => apiFetch<{ items: CartItem[] }>('/cart'),
+          });
           dbItems = data.items;
         } catch {
-          // DB fetch failed — treat DB as empty; don't lose local guest items
+          // DB fetch failed — merge guest items into empty DB cart
         }
 
-        const merged = mergeItems(dbItems, guestItems);
+        const merged = mergeItems(dbItems, currentGuestItems);
 
-        try {
-          await apiFetch<{ items: CartItem[] }>('/cart', {
-            method: 'PUT',
-            body: JSON.stringify({ items: merged }),
-          });
-        } catch {
-          // Save failed — still show merged items in UI; next mutation will retry
-        }
+        // Immediately update cache for instant UI response
+        queryClient.setQueryData(['cart'], { items: merged });
+
+        // Persist merged cart to server
+        updateCartMutation.mutate(merged);
 
         clearGuestCart();
-        dispatch({ type: 'SET_CART', items: merged });
+        setGuestItems([]);
       })();
     } else if (prevUser !== null && user === null) {
-      // User just logged out — clear the in-memory cart
-      dispatch({ type: 'SET_CART', items: [] });
+      // User just logged out — clear server cache and switch to guest mode
+      queryClient.removeQueries({ queryKey: ['cart'] });
+      setGuestItems([]);
     }
-  }, [isLoading, user]);
+  }, [isLoading, user]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // ── Optimistic sync helper ────────────────────────────────────────────────
+  // ── Derive current items from auth state ──────────────────────────────────
+  // Authenticated: read from TanStack Query cache (auto-updated after mutations)
+  // Guest:         read from local state (backed by localStorage)
+  const items = user ? (cartQuery.data?.items ?? []) : guestItems;
 
-  // Persists cart changes:
-  //   - Logged in: PUT /cart; rolls back to prevItems on failure
-  //   - Guest:     write to localStorage (synchronous, no rollback needed)
-  function syncCart(nextItems: CartItem[], prevItems: CartItem[]) {
-    if (user) {
-      void apiFetch<{ items: CartItem[] }>('/cart', {
-        method: 'PUT',
-        body: JSON.stringify({ items: nextItems }),
-      }).catch(() => {
-        // API call failed — roll back the optimistic UI update
-        dispatch({ type: 'SET_CART', items: prevItems });
-      });
-    } else {
-      saveGuestCart(nextItems);
-    }
+  // Helper: compute next items by running an action through the pure reducer
+  function computeNext(action: CartAction): CartItem[] {
+    return cartReducer({ items }, action).items;
   }
 
-  // ── Action handlers (optimistic: update UI first, then persist) ───────────
+  // ── Action handlers ───────────────────────────────────────────────────────
 
   const addItem = (item: Omit<CartItem, 'quantity'>) => {
-    const prev = state.items;
-    const action: CartAction = { type: 'ADD_ITEM', item };
-    const next = cartReducer(state, action).items;
-    dispatch(action);
-    syncCart(next, prev);
+    const next = computeNext({ type: 'ADD_ITEM', item });
+    if (user) {
+      updateCartMutation.mutate(next);
+    } else {
+      setGuestItems(next);
+      saveGuestCart(next);
+    }
   };
 
   const removeItem = (productId: string, size: string) => {
-    const prev = state.items;
-    const action: CartAction = { type: 'REMOVE_ITEM', productId, size };
-    const next = cartReducer(state, action).items;
-    dispatch(action);
-    syncCart(next, prev);
+    const next = computeNext({ type: 'REMOVE_ITEM', productId, size });
+    if (user) {
+      updateCartMutation.mutate(next);
+    } else {
+      setGuestItems(next);
+      saveGuestCart(next);
+    }
   };
 
   const updateQuantity = (productId: string, size: string, quantity: number) => {
-    const prev = state.items;
-    const action: CartAction = { type: 'UPDATE_QUANTITY', productId, size, quantity };
-    const next = cartReducer(state, action).items;
-    dispatch(action);
-    syncCart(next, prev);
+    const next = computeNext({ type: 'UPDATE_QUANTITY', productId, size, quantity });
+    if (user) {
+      updateCartMutation.mutate(next);
+    } else {
+      setGuestItems(next);
+      saveGuestCart(next);
+    }
   };
 
   const clearCart = () => {
-    const prev = state.items;
-    dispatch({ type: 'CLEAR_CART' });
-    syncCart([], prev);
+    if (user) {
+      updateCartMutation.mutate([]);
+    } else {
+      setGuestItems([]);
+      saveGuestCart([]);
+    }
   };
 
-  const totalItems = state.items.reduce((sum, i) => sum + i.quantity, 0);
-  const subtotal = state.items.reduce((sum, i) => sum + i.price * i.quantity, 0);
+  const totalItems = items.reduce((sum, i) => sum + i.quantity, 0);
+  const subtotal = items.reduce((sum, i) => sum + i.price * i.quantity, 0);
 
   return (
     <CartContext.Provider
-      value={{ items: state.items, totalItems, subtotal, addItem, removeItem, updateQuantity, clearCart }}
+      value={{ items, totalItems, subtotal, addItem, removeItem, updateQuantity, clearCart }}
     >
       {children}
     </CartContext.Provider>

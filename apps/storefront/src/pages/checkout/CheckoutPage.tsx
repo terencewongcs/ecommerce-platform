@@ -131,13 +131,13 @@ export default function CheckoutPage() {
                 Your Order
               </p>
               <ul className="space-y-4 mb-6">
-                {items.map(({ product, size, quantity }) => (
-                  <li key={`${product.id}-${size}`} className="flex gap-3">
-                    <div className="w-12 h-16 flex-shrink-0" style={{ backgroundColor: product.bg }} />
+                {items.map(({ productId, name, bg, size, quantity, price }) => (
+                  <li key={`${productId}-${size}`} className="flex gap-3">
+                    <div className="w-12 h-16 flex-shrink-0" style={{ backgroundColor: bg }} />
                     <div className="flex-1 min-w-0">
-                      <p className="text-xs font-medium text-brand-black truncate">{product.name}</p>
+                      <p className="text-xs font-medium text-brand-black truncate">{name}</p>
                       <p className="text-[10px] text-brand-slate">Size: {size} · Qty: {quantity}</p>
-                      <p className="text-xs text-brand-black mt-1">${product.price * quantity}</p>
+                      <p className="text-xs text-brand-black mt-1">${price * quantity}</p>
                     </div>
                   </li>
                 ))}
