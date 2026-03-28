@@ -1,6 +1,19 @@
-// Mirrors the Mongoose model shapes returned by the API.
-// All _id fields are strings (Mongoose serializes ObjectId to string in JSON).
+// Re-export all shared API types from the monorepo types package.
+// Components should import from here rather than directly from @trendyuniquellc/types,
+// so this file remains the single import point for the dashboard.
+export type {
+  UserRole,
+  ApiUser,
+  OrderStatus,
+  ApiOrderItem,
+  ApiShippingAddress,
+  ApiOrder,
+  Pagination,
+  AdminStats,
+} from "@trendyuniquellc/types";
 
+// ApiProduct uses _id (raw Mongoose response) rather than the domain id field.
+// Defined locally since it reflects the raw API wire format, not the shared domain type.
 export type ApiProduct = {
   _id: string;
   slug: string;
@@ -18,66 +31,4 @@ export type ApiProduct = {
   vendorId: string;
   createdAt: string;
   updatedAt: string;
-};
-
-export type OrderStatus = 'pending' | 'confirmed' | 'shipped' | 'delivered' | 'cancelled';
-
-export type ApiOrderItem = {
-  productId: string;
-  slug: string;
-  name: string;
-  brand: string;
-  size: string;
-  quantity: number;
-  unitPrice: number;
-};
-
-export type ApiShippingAddress = {
-  firstName: string;
-  lastName: string;
-  address: string;
-  city: string;
-  zip: string;
-};
-
-export type ApiOrder = {
-  _id: string;
-  userId: string;
-  items: ApiOrderItem[];
-  status: OrderStatus;
-  shippingAddress: ApiShippingAddress;
-  subtotal: number;
-  tax: number;
-  shippingCost: number;
-  total: number;
-  createdAt: string;
-  updatedAt: string;
-};
-
-export type UserRole = 'customer' | 'admin' | 'vendor';
-
-export type ApiUser = {
-  _id: string;
-  email: string;
-  firstName: string;
-  lastName: string;
-  role: UserRole;
-  createdAt: string;
-  updatedAt: string;
-};
-
-export type Pagination = {
-  page: number;
-  limit: number;
-  total: number;
-  totalPages: number;
-};
-
-export type AdminStats = {
-  products: { total: number; published: number };
-  orders: { total: number };
-  users: { total: number };
-  revenue: { total: number };
-  ordersByStatus: Array<{ _id: string; count: number }>;
-  dailyRevenue: Array<{ _id: string; revenue: number; orders: number }>;
 };

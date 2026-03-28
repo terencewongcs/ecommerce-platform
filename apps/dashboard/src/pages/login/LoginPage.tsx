@@ -1,6 +1,8 @@
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { LoginSchema, type LoginInput } from '@trendyuniquellc/types';
 import Box from '@mui/material/Box';
 import Card from '@mui/material/Card';
 import CardContent from '@mui/material/CardContent';
@@ -9,11 +11,6 @@ import Button from '@mui/material/Button';
 import Typography from '@mui/material/Typography';
 import Alert from '@mui/material/Alert';
 import { useAuth } from '../../hooks/useAuth';
-
-type FormValues = {
-  email: string;
-  password: string;
-};
 
 export default function LoginPage() {
   const navigate = useNavigate();
@@ -31,9 +28,9 @@ export default function LoginPage() {
     handleSubmit,
     setError,
     formState: { errors, isSubmitting },
-  } = useForm<FormValues>();
+  } = useForm<LoginInput>({ resolver: zodResolver(LoginSchema) });
 
-  async function onSubmit({ email, password }: FormValues) {
+  async function onSubmit({ email, password }: LoginInput) {
     try {
       await login(email, password);
       navigate('/');
@@ -64,21 +61,19 @@ export default function LoginPage() {
               label="Email"
               type="email"
               fullWidth
-              required
               margin="normal"
               error={!!errors.email}
               helperText={errors.email?.message}
-              {...register('email', { required: 'Email is required' })}
+              {...register('email')}
             />
             <TextField
               label="Password"
               type="password"
               fullWidth
-              required
               margin="normal"
               error={!!errors.password}
               helperText={errors.password?.message}
-              {...register('password', { required: 'Password is required' })}
+              {...register('password')}
             />
 
             {errors.root && (

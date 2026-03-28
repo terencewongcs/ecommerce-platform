@@ -1,5 +1,5 @@
 import { Router, type Router as RouterType, type Request, type Response } from "express";
-import { z } from "zod";
+import { UpdateProfileSchema, ConfirmPasswordSchema } from "@trendyuniquellc/types";
 import crypto from "crypto";
 import bcrypt from "bcrypt";
 import { User } from "../models/User.js";
@@ -13,11 +13,6 @@ const BCRYPT_ROUNDS = 12;
 const RESET_TOKEN_EXPIRY_MS = 60 * 60 * 1000; // 1 hour
 
 // ── PATCH /account/profile ────────────────────────────────────────────────────
-
-const UpdateProfileSchema = z.object({
-  firstName: z.string().min(1),
-  lastName: z.string().min(1),
-});
 
 router.patch("/profile", requireAuth, async (req: Request, res: Response) => {
   const parsed = UpdateProfileSchema.safeParse(req.body);
@@ -66,11 +61,6 @@ router.post("/change-password/request", requireAuth, async (req: Request, res: R
 
 // ── POST /account/change-password/confirm ─────────────────────────────────────
 // Public endpoint — user arrives via email link, may not have an active session
-
-const ConfirmPasswordSchema = z.object({
-  token: z.string().min(1),
-  newPassword: z.string().min(8, "Password must be at least 8 characters"),
-});
 
 router.post("/change-password/confirm", async (req: Request, res: Response) => {
   const parsed = ConfirmPasswordSchema.safeParse(req.body);

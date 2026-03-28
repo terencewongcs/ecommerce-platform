@@ -1,14 +1,11 @@
 import { useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { ResetPasswordFormSchema, type ResetPasswordFormInput } from '@trendyuniquellc/types';
 import Navbar from '../../components/Navbar';
 import Footer from '../../components/Footer';
 import { apiFetch } from '../../lib/apiClient';
-
-type FormValues = {
-  newPassword: string;
-  confirmPassword: string;
-};
 
 export default function ResetPasswordPage() {
   const [searchParams] = useSearchParams();
@@ -18,15 +15,14 @@ export default function ResetPasswordPage() {
   const {
     register,
     handleSubmit,
-    watch,
     setError,
     formState: { errors, isSubmitting },
-  } = useForm<FormValues>();
+  } = useForm<ResetPasswordFormInput>({ resolver: zodResolver(ResetPasswordFormSchema) });
 
   // If no token in URL, show an error immediately
   const missingToken = !token;
 
-  async function onSubmit({ newPassword }: FormValues) {
+  async function onSubmit({ newPassword }: ResetPasswordFormInput) {
     try {
       await apiFetch('/account/change-password/confirm', {
         method: 'POST',
@@ -98,10 +94,7 @@ export default function ResetPasswordPage() {
               <form onSubmit={handleSubmit(onSubmit)} className="space-y-4" noValidate>
                 <div>
                   <input
-                    {...register('newPassword', {
-                      required: 'Password is required',
-                      minLength: { value: 8, message: 'At least 8 characters' },
-                    })}
+                    {...register('newPassword')}
                     type="password"
                     placeholder="New password"
                     className="w-full border border-brand-surface bg-white px-4 py-3 text-sm text-brand-black placeholder:text-brand-slate focus:outline-none focus:border-brand-black"
@@ -113,11 +106,7 @@ export default function ResetPasswordPage() {
 
                 <div>
                   <input
-                    {...register('confirmPassword', {
-                      required: 'Please confirm your password',
-                      validate: (v) =>
-                        v === watch('newPassword') || 'Passwords do not match',
-                    })}
+                    {...register('confirmPassword')}
                     type="password"
                     placeholder="Confirm new password"
                     className="w-full border border-brand-surface bg-white px-4 py-3 text-sm text-brand-black placeholder:text-brand-slate focus:outline-none focus:border-brand-black"

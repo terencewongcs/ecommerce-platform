@@ -1,5 +1,7 @@
 import { useEffect } from 'react';
 import { useForm, useFieldArray, Controller } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Box from '@mui/material/Box';
@@ -20,21 +22,24 @@ import AddIcon from '@mui/icons-material/Add';
 import DeleteIcon from '@mui/icons-material/Delete';
 import type { ApiProduct } from '../lib/apiTypes';
 
-export type ProductFormValues = {
-  slug: string;
-  name: string;
-  brand: string;
-  description: string;
-  price: number;
-  originalPrice: number | undefined;
-  images: { url: string }[];
-  stock: number;
-  category: string[];
-  sizes: string[];
-  tag: 'New' | 'Sale' | 'Bestseller' | '';
-  isPublished: boolean;
-  vendorId: string;
-};
+// Form-specific schema — images are objects for useFieldArray, tag includes empty string for "none".
+const ProductFormSchema = z.object({
+  slug: z.string().min(1, 'Slug is required'),
+  name: z.string().min(1, 'Name is required'),
+  brand: z.string().min(1, 'Brand is required'),
+  description: z.string(),
+  price: z.number({ invalid_type_error: 'Price is required' }).nonnegative('Price must be 0 or above'),
+  originalPrice: z.number().nonnegative().optional(),
+  images: z.array(z.object({ url: z.string() })),
+  stock: z.number({ invalid_type_error: 'Stock is required' }).int().nonnegative('Stock must be 0 or above'),
+  category: z.array(z.string()),
+  sizes: z.array(z.string()),
+  tag: z.enum(['New', 'Sale', 'Bestseller', '']),
+  isPublished: z.boolean(),
+  vendorId: z.string().min(1, 'Vendor ID is required'),
+});
+
+export type ProductFormValues = z.infer<typeof ProductFormSchema>;
 
 const CATEGORIES = ['women', 'men', 'accessories', 'new-arrivals', 'sale'] as const;
 const TAGS = ['New', 'Sale', 'Bestseller'] as const;
@@ -77,7 +82,10 @@ export default function ProductForm({ defaultValues, onSubmit, isSubmitting }: P
     setValue,
     watch,
     formState: { errors },
-  } = useForm<ProductFormValues>({ defaultValues: initialValues });
+  } = useForm<ProductFormValues>({
+    resolver: zodResolver(ProductFormSchema),
+    defaultValues: initialValues,
+  });
 
   const { fields, append, remove } = useFieldArray({ control, name: 'images' });
   const nameValue = watch('name');
@@ -121,7 +129,7 @@ export default function ProductForm({ defaultValues, onSubmit, isSubmitting }: P
             required
             error={!!errors.name}
             helperText={errors.name?.message}
-            {...register('name', { required: 'Name is required' })}
+            {...register('name')}
           />
         </Grid>
 
@@ -133,7 +141,7 @@ export default function ProductForm({ defaultValues, onSubmit, isSubmitting }: P
             required
             error={!!errors.slug}
             helperText={errors.slug?.message ?? 'Auto-generated from name — must be unique'}
-            {...register('slug', { required: 'Slug is required' })}
+            {...register('slug')}
           />
         </Grid>
 
@@ -145,7 +153,7 @@ export default function ProductForm({ defaultValues, onSubmit, isSubmitting }: P
             required
             error={!!errors.brand}
             helperText={errors.brand?.message}
-            {...register('brand', { required: 'Brand is required' })}
+            {...register('brand')}
           />
         </Grid>
 
@@ -157,7 +165,7 @@ export default function ProductForm({ defaultValues, onSubmit, isSubmitting }: P
             required
             error={!!errors.vendorId}
             helperText={errors.vendorId?.message ?? 'MongoDB ObjectId of the vendor user'}
-            {...register('vendorId', { required: 'Vendor ID is required' })}
+            {...register('vendorId')}
           />
         </Grid>
 
@@ -171,7 +179,7 @@ export default function ProductForm({ defaultValues, onSubmit, isSubmitting }: P
             inputProps={{ min: 0, step: '0.01' }}
             error={!!errors.price}
             helperText={errors.price?.message}
-            {...register('price', { required: true, valueAsNumber: true, min: 0 })}
+            {...register('price', { valueAsNumber: true })}
           />
         </Grid>
 
@@ -183,7 +191,7 @@ export default function ProductForm({ defaultValues, onSubmit, isSubmitting }: P
             fullWidth
             inputProps={{ min: 0, step: '0.01' }}
             helperText="Leave empty if not on sale"
-            {...register('originalPrice', { valueAsNumber: true })}
+            {...register('originalPrice', { valueAsNumber: true, setValueAs: (v) => (v === '' || isNaN(v) ? undefined : v) })}
           />
         </Grid>
 
@@ -197,7 +205,7 @@ export default function ProductForm({ defaultValues, onSubmit, isSubmitting }: P
             inputProps={{ min: 0 }}
             error={!!errors.stock}
             helperText={errors.stock?.message}
-            {...register('stock', { required: true, valueAsNumber: true, min: 0 })}
+            {...register('stock', { valueAsNumber: true })}
           />
         </Grid>
 
