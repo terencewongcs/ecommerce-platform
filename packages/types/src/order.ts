@@ -52,3 +52,9 @@ export const ApiOrderSchema = z.object({
   updatedAt: z.string().datetime(),
 });
 export type ApiOrder = z.infer<typeof ApiOrderSchema>;
+
+export const CreateOrderSchema = z.object({
+  shippingAddress: ApiShippingAddressSchema,
+  idempotencyKey: z.string().uuid(),
+});
+export type CreateOrderInput = z.infer<typeof CreateOrderSchema>;

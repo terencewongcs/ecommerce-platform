@@ -6,8 +6,15 @@ import adminRouter from "./routes/admin.js";
 import vendorRouter from "./routes/vendor.js";
 import accountRouter from "./routes/account.js";
 import cartRouter from "./routes/cart.js";
+import ordersRouter from "./routes/orders.js";
 
 const app: Express = express();
+
+// ── Stripe webhook raw body ───────────────────────────────────────────────────
+// MUST be registered before express.json() so the raw Buffer reaches the webhook handler.
+// express.json() would consume and discard the raw bytes needed for signature verification.
+
+app.use("/orders/webhook", express.raw({ type: "application/json" }));
 
 // ── Core middleware ──────────────────────────────────────────────────────────
 
@@ -57,6 +64,7 @@ app.use("/admin", adminRouter);
 app.use("/vendor", vendorRouter);
 app.use("/account", accountRouter);
 app.use("/cart", cartRouter);
+app.use("/orders", ordersRouter);
 
 // Health check — useful for deployment readiness probes
 app.get("/health", (_req: Request, res: Response) => {
