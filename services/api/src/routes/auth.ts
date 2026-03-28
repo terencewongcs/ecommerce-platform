@@ -183,7 +183,7 @@ router.post("/refresh", async (req: Request, res: Response) => {
   };
 
   setRefreshCookie(res, newRefreshToken);
-  res.json({ accessToken: signAccessToken(accessPayload) });
+  res.json({ accessToken: signAccessToken(accessPayload), user });
 });
 
 // ── POST /auth/logout ────────────────────────────────────────────────────────
