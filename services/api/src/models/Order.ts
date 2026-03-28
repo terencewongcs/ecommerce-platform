@@ -1,11 +1,15 @@
 import mongoose, { Schema, type Document } from "mongoose";
 
 export type OrderStatus =
-  | "pending"
-  | "confirmed"
+  | "pending_payment"
+  | "paid"
+  | "processing"
   | "shipped"
   | "delivered"
-  | "cancelled";
+  | "completed"
+  | "cancelled"
+  | "refund_requested"
+  | "refunded";
 
 export interface IOrderItem {
   productId: mongoose.Types.ObjectId;
@@ -34,6 +38,11 @@ export interface IOrder extends Document {
   tax: number;
   shippingCost: number;
   total: number;
+  stripePaymentIntentId: string;
+  trackingNumber?: string;
+  carrier?: string;
+  shippedAt?: Date;
+  refundReason?: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -68,9 +77,14 @@ const OrderSchema = new Schema<IOrder>(
     items: { type: [OrderItemSchema], required: true },
     status: {
       type: String,
-      enum: ["pending", "confirmed", "shipped", "delivered", "cancelled"],
-      default: "pending",
+      enum: ["pending_payment", "paid", "processing", "shipped", "delivered", "completed", "cancelled", "refund_requested", "refunded"],
+      default: "pending_payment",
     },
+    stripePaymentIntentId: { type: String, required: true },
+    trackingNumber: { type: String },
+    carrier: { type: String },
+    shippedAt: { type: Date },
+    refundReason: { type: String },
     shippingAddress: { type: ShippingAddressSchema, required: true },
     subtotal: { type: Number, required: true, min: 0 },
     tax: { type: Number, required: true, min: 0 },
@@ -81,5 +95,6 @@ const OrderSchema = new Schema<IOrder>(
 );
 
 OrderSchema.index({ userId: 1, createdAt: -1 });
+OrderSchema.index({ stripePaymentIntentId: 1 }, { unique: true });
 
 export const Order = mongoose.model<IOrder>("Order", OrderSchema);

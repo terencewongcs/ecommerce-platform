@@ -145,8 +145,8 @@ router.get("/orders", requireVendor, async (req: Request, res: Response) => {
 // ── PATCH /vendor/orders/:id/status ──────────────────────────────────────────
 
 const UpdateOrderStatusSchema = z.object({
-  // Vendors cannot set orders back to "pending"
-  status: z.enum(["confirmed", "shipped", "delivered", "cancelled"]),
+  // Vendors can only move orders forward; cancellation and refunds have dedicated routes
+  status: z.enum(["processing", "shipped", "delivered", "refunded"]),
 });
 
 router.patch("/orders/:id/status", requireVendor, async (req: Request, res: Response) => {
