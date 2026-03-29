@@ -1,10 +1,12 @@
 import { Router, type Router as RouterType, type Request, type Response } from "express";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
-import { RegisterSchema, LoginSchema } from "@trendyuniquellc/types";
-import { User } from "../models/User.js";
+import { RegisterSchema, LoginSchema, VendorRegisterSchema } from "@trendyuniquellc/types";
+import { User, type IUser } from "../models/User.js";
+import { VendorProfile } from "../models/VendorProfile.js";
 import { env } from "../lib/env.js";
 import type { JwtAccessPayload } from "../middleware/auth.js";
+import { type HydratedDocument } from "mongoose";
 
 const router: RouterType = Router();
 
@@ -80,6 +82,63 @@ router.post("/register", async (req: Request, res: Response) => {
   const refreshToken = signRefreshToken(user.id as string);
 
   // Store a hash of the refresh token so we can validate it later
+  const refreshHash = await bcrypt.hash(refreshToken, BCRYPT_ROUNDS);
+  await User.findByIdAndUpdate(user.id, { $push: { refreshTokenHashes: refreshHash } });
+
+  setRefreshCookie(res, refreshToken);
+  res.status(201).json({ accessToken, user });
+});
+
+// ── POST /auth/vendor-register ───────────────────────────────────────────────
+
+router.post("/vendor-register", async (req: Request, res: Response) => {
+  const parsed = VendorRegisterSchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: "Validation failed", details: parsed.error.flatten() });
+    return;
+  }
+
+  const { email, password, firstName, lastName, storeName } = parsed.data;
+
+  // Reject if email is already taken by any user (customer, vendor, or admin)
+  const existing = await User.findOne({ email });
+  if (existing) {
+    res.status(409).json({ error: "Email already registered" });
+    return;
+  }
+
+  const passwordHash = await bcrypt.hash(password, BCRYPT_ROUNDS);
+
+  // Create User (role: vendor) and VendorProfile atomically via session
+  const session = await User.startSession();
+  let user: HydratedDocument<IUser>;
+  try {
+    // withTransaction returns whatever the callback returns — use it to capture the user
+    const created = await session.withTransaction(async () => {
+      const docs = await User.create(
+        [{ email, passwordHash, firstName, lastName, role: "vendor" }],
+        { session },
+      );
+      const doc = docs[0];
+      // noUncheckedIndexedAccess guard — create() with one item always returns one item
+      if (!doc) throw new Error("User creation returned empty array");
+      await VendorProfile.create([{ userId: doc._id, storeName }], { session });
+      return doc;
+    });
+    user = created;
+  } finally {
+    await session.endSession();
+  }
+
+  const accessPayload: JwtAccessPayload = {
+    sub: user.id as string,
+    email: user.email,
+    role: "vendor",
+  };
+
+  const accessToken = signAccessToken(accessPayload);
+  const refreshToken = signRefreshToken(user.id as string);
+
   const refreshHash = await bcrypt.hash(refreshToken, BCRYPT_ROUNDS);
   await User.findByIdAndUpdate(user.id, { $push: { refreshTokenHashes: refreshHash } });
 

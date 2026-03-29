@@ -12,6 +12,14 @@ export type {
   AdminStats,
 } from "@trendyuniquellc/types";
 
+// VendorStats is the vendor-scoped equivalent of AdminStats (no users / ordersByStatus).
+export type VendorStats = {
+  products: { total: number; published: number };
+  orders: { total: number };
+  revenue: { total: number };
+  dailyRevenue: Array<{ _id: string; revenue: number; orders: number }>;
+};
+
 // ApiProduct uses _id (raw Mongoose response) rather than the domain id field.
 // Defined locally since it reflects the raw API wire format, not the shared domain type.
 export type ApiProduct = {

@@ -1367,17 +1367,17 @@ async function seed() {
   console.log("MongoDB connected");
 
   // Find or create a seed admin user to use as vendorId
-  let admin = await User.findOne({ email: "admin@trendyunique.com" });
+  let admin = await User.findOne({ email: "admin2@trendyunique.com" });
   if (!admin) {
     const passwordHash = await bcrypt.hash("Admin1234!", 12);
     admin = await User.create({
-      email: "admin@trendyunique.com",
+      email: "admin2@trendyunique.com",
       passwordHash,
-      firstName: "Admin",
+      firstName: "Admin2",
       lastName: "TrendyUnique",
       role: "admin",
     });
-    console.log("Created admin user: admin@trendyunique.com / Admin1234!");
+    console.log("Created admin user: admin2@trendyunique.com / Admin1234!");
   } else {
     console.log("Admin user already exists, skipping creation");
   }

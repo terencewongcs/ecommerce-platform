@@ -45,11 +45,20 @@ interface JwtPayload {
   role: UserRole;
 }
 
+interface VendorRegisterPayload {
+  email: string;
+  password: string;
+  firstName: string;
+  lastName: string;
+  storeName: string;
+}
+
 interface AuthContextValue {
   user: AuthUser | null;
   isLoading: boolean;
   isAuthenticated: boolean;
   login: (email: string, password: string) => Promise<void>;
+  vendorRegister: (payload: VendorRegisterPayload) => Promise<void>;
   logout: () => Promise<void>;
 }
 
@@ -152,6 +161,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(mapped);
   }, []);
 
+  const vendorRegister = useCallback(async (payload: VendorRegisterPayload): Promise<void> => {
+    const data = await apiFetch<AuthApiResponse>('/auth/vendor-register', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+      skipAuth: true,
+    });
+    const mapped = mapApiUser(data.user);
+    setAccessToken(data.accessToken);
+    cacheUserProfile(mapped);
+    setUser(mapped);
+  }, []);
+
   const logout = useCallback(async (): Promise<void> => {
     try {
       await apiFetch('/auth/logout', { method: 'POST', skipAuth: true });
@@ -164,7 +185,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   return (
     <AuthContext.Provider
-      value={{ user, isLoading, isAuthenticated: user !== null, login, logout }}
+      value={{ user, isLoading, isAuthenticated: user !== null, login, vendorRegister, logout }}
     >
       {children}
     </AuthContext.Provider>

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { UpdateProfileSchema, type UpdateProfileInput } from '@trendyuniquellc/types';
@@ -174,6 +174,20 @@ export default function AccountPage() {
                 )}
               </>
             )}
+          </section>
+
+          {/* ── My Orders ────────────────────────────────────────────────── */}
+          <section className="mt-12">
+            <h2 className="text-xs tracking-[0.2em] uppercase text-brand-black mb-6 pb-3 border-b border-brand-surface">
+              My Orders
+            </h2>
+            <Link
+              to="/account/orders"
+              className="inline-flex items-center gap-2 text-sm text-brand-slate hover:text-brand-black transition-colors duration-150"
+            >
+              View order history
+              <span className="text-[11px] tracking-[0.1em]">→</span>
+            </Link>
           </section>
 
         </div>
