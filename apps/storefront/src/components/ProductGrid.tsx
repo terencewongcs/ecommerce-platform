@@ -18,15 +18,23 @@ export default function ProductGrid({ products }: Props) {
 
   return (
     <div className="grid grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-10">
-      {products.map(({ id, slug, name, brand, price, originalPrice, bg, tag }) => (
+      {products.map(({ id, slug, name, brand, price, originalPrice, bg, images, tag }) => (
         <Link key={id} to={`/products/${slug}`} className="group">
 
-          {/* Image placeholder */}
+          {/* Product image — real photo if available, color placeholder otherwise */}
           <div className="relative aspect-[3/4] overflow-hidden mb-4">
-            <div
-              className="w-full h-full transition-transform duration-700 group-hover:scale-105"
-              style={{ backgroundColor: bg }}
-            />
+            {images?.[0] ? (
+              <img
+                src={images[0]}
+                alt={name}
+                className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+              />
+            ) : (
+              <div
+                className="w-full h-full transition-transform duration-700 group-hover:scale-105"
+                style={{ backgroundColor: bg }}
+              />
+            )}
             {tag && (
               <span
                 className={`absolute top-3 left-3 text-[10px] tracking-[0.15em] uppercase px-2.5 py-1 font-semibold ${TAG_STYLES[tag]}`}

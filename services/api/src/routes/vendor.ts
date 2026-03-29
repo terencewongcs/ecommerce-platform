@@ -1,4 +1,5 @@
 import { Router, type Router as RouterType, type Request, type Response } from "express";
+import multer from "multer";
 import { z } from "zod";
 import mongoose from "mongoose";
 import { Product } from "../models/Product.js";
@@ -7,8 +8,22 @@ import { User } from "../models/User.js";
 import { requireVendor } from "../middleware/auth.js";
 import { stripe } from "../lib/stripe.js";
 import { sendRefundConfirmationEmail } from "../lib/email.js";
+import { uploadProductImage } from "../lib/r2.js";
 
 const router: RouterType = Router();
+
+// Multer instance: keep uploaded files in memory (no disk writes), max 5 MB, images only
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 5 * 1024 * 1024 },
+  fileFilter: (_req, file, cb) => {
+    if (file.mimetype.startsWith("image/")) {
+      cb(null, true);
+    } else {
+      cb(new Error("Only image files are allowed"));
+    }
+  },
+});
 
 // ── Shared pagination schema ──────────────────────────────────────────────────
 
@@ -90,6 +105,31 @@ router.get("/stats", requireVendor, async (req: Request, res: Response) => {
     dailyRevenue: dailyRevenue as Array<{ _id: string; revenue: number; orders: number }>,
   });
 });
+
+// ── POST /vendor/images/upload ────────────────────────────────────────────────
+// Accepts a single image file (multipart/form-data, field name "image").
+// Uploads it to Cloudflare R2 and returns the public URL.
+
+router.post(
+  "/images/upload",
+  requireVendor,
+  upload.single("image"),
+  async (req: Request, res: Response) => {
+    if (!req.file) {
+      res.status(400).json({ error: "No image file provided" });
+      return;
+    }
+
+    const url = await uploadProductImage(
+      req.file.buffer,
+      req.file.mimetype,
+      req.file.originalname,
+      req.user!.sub,
+    );
+
+    res.json({ url });
+  },
+);
 
 // ── GET /vendor/products ──────────────────────────────────────────────────────
 

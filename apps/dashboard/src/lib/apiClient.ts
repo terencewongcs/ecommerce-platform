@@ -84,3 +84,38 @@ export async function apiFetch<T>(path: string, options: ApiFetchOptions = {}): 
 
   return res.json() as Promise<T>;
 }
+
+/**
+ * Uploads a single image file to the vendor image upload endpoint.
+ * Uses FormData so the browser sets the correct multipart Content-Type automatically.
+ * Returns the public CDN URL of the uploaded image.
+ */
+export async function uploadImage(file: File): Promise<string> {
+  const formData = new FormData();
+  formData.append('image', file);
+
+  const headers = new Headers();
+  if (accessToken) {
+    headers.set('Authorization', `Bearer ${accessToken}`);
+  }
+
+  const url = `${clientEnv.VITE_API_URL}/vendor/images/upload`;
+  let res = await fetch(url, { method: 'POST', headers, body: formData, credentials: 'include' });
+
+  // Silent token refresh on 401, then retry once
+  if (res.status === 401) {
+    const newToken = await refreshAccessToken();
+    if (newToken) {
+      headers.set('Authorization', `Bearer ${newToken}`);
+      res = await fetch(url, { method: 'POST', headers, body: formData, credentials: 'include' });
+    }
+  }
+
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({ error: res.statusText }));
+    throw new ApiError(res.status, body);
+  }
+
+  const data = (await res.json()) as { url: string };
+  return data.url;
+}

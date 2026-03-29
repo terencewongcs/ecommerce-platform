@@ -15,7 +15,8 @@ export type StaticProduct = {
   originalPrice?: number; // shown when tag is 'Sale'
   category: Category[];
   sizes: string[];
-  bg: string; // placeholder color
+  bg: string; // placeholder color — shown when images array is empty
+  images?: string[]; // real product images from Cloudflare R2
   tag: ProductTag;
 };
 

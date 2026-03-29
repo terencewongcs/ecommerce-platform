@@ -126,7 +126,11 @@ export default function ProductDetailPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
 
             {/* Left: images */}
-            <ProductImages name={product.name} bg={product.bg} />
+            <ProductImages
+              name={product.name}
+              bg={product.bg}
+              {...(product.images ? { images: product.images } : {})}
+            />
 
             {/* Right: info + actions */}
             <div id="size-selector">
