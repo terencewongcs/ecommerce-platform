@@ -11,6 +11,7 @@ import CardContent from '@mui/material/CardContent';
 import Grid from '@mui/material/Grid';
 import Divider from '@mui/material/Divider';
 import Chip from '@mui/material/Chip';
+import Button from '@mui/material/Button';
 import FormControl from '@mui/material/FormControl';
 import InputLabel from '@mui/material/InputLabel';
 import Select from '@mui/material/Select';
@@ -22,6 +23,7 @@ import TableHead from '@mui/material/TableHead';
 import TableRow from '@mui/material/TableRow';
 import Snackbar from '@mui/material/Snackbar';
 import { useState } from 'react';
+import TextField from '@mui/material/TextField';
 import { apiFetch } from '../../lib/apiClient';
 import { useAuth } from '../../hooks/useAuth';
 import type { ApiOrder, OrderStatus } from '../../lib/apiTypes';
@@ -29,18 +31,16 @@ import type { ApiOrder, OrderStatus } from '../../lib/apiTypes';
 const STATUS_COLOR: Record<OrderStatus, 'default' | 'warning' | 'info' | 'primary' | 'success' | 'error'> = {
   pending_payment:  'warning',
   paid:             'info',
-  processing:       'info',
   shipped:          'primary',
   delivered:        'success',
-  completed:        'success',
   cancelled:        'error',
   refund_requested: 'warning',
   refunded:         'default',
 };
 
-// Vendors can move orders forward and approve refunds; cancellation/payment states are system-managed
-const VENDOR_STATUS_OPTIONS: OrderStatus[] = ['processing', 'shipped', 'delivered', 'refunded'];
-const ADMIN_STATUS_OPTIONS: OrderStatus[] = ['pending_payment', 'paid', 'processing', 'shipped', 'delivered', 'completed', 'cancelled', 'refund_requested', 'refunded'];
+// Vendors can ship orders (paid → shipped) or approve refunds (refund_requested → cancelled)
+const VENDOR_STATUS_OPTIONS: OrderStatus[] = ['shipped', 'cancelled'];
+const ADMIN_STATUS_OPTIONS: OrderStatus[] = ['pending_payment', 'paid', 'shipped', 'delivered', 'cancelled', 'refund_requested', 'refunded'];
 
 export default function OrderDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -48,6 +48,8 @@ export default function OrderDetailPage() {
   const queryClient = useQueryClient();
   const { user } = useAuth();
   const [successMessage, setSuccessMessage] = useState('');
+  const [trackingNumber, setTrackingNumber] = useState('');
+  const [carrier, setCarrier] = useState('');
 
   const endpoint = user?.role === 'admin' ? '/admin/orders' : '/vendor/orders';
 
@@ -57,10 +59,10 @@ export default function OrderDetailPage() {
   });
 
   const statusMutation = useMutation({
-    mutationFn: (status: OrderStatus) =>
+    mutationFn: (body: Record<string, unknown>) =>
       apiFetch(`${endpoint}/${id!}/status`, {
         method: 'PATCH',
-        body: JSON.stringify({ status }),
+        body: JSON.stringify(body),
       }),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['order', id] });
@@ -82,7 +84,7 @@ export default function OrderDetailPage() {
   }
 
   const order = data.order;
-  const statusOptions = user?.role === 'admin' ? ADMIN_STATUS_OPTIONS : VENDOR_STATUS_OPTIONS;
+  const isAdmin = user?.role === 'admin';
 
   return (
     <Box>
@@ -158,19 +160,71 @@ export default function OrderDetailPage() {
               <Typography variant="subtitle2" fontWeight={600} gutterBottom>
                 Update Status
               </Typography>
-              <FormControl fullWidth size="small">
-                <InputLabel>Status</InputLabel>
-                <Select
-                  label="Status"
-                  value={order.status}
-                  onChange={(e) => statusMutation.mutate(e.target.value as OrderStatus)}
+
+              {/* Admin: full dropdown */}
+              {isAdmin && (
+                <FormControl fullWidth size="small">
+                  <InputLabel>Status</InputLabel>
+                  <Select
+                    label="Status"
+                    value={order.status}
+                    onChange={(e) => statusMutation.mutate({ status: e.target.value as OrderStatus })}
+                    disabled={statusMutation.isPending}
+                  >
+                    {ADMIN_STATUS_OPTIONS.map((s) => (
+                      <MenuItem key={s} value={s} sx={{ textTransform: 'capitalize' }}>{s}</MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              )}
+
+              {/* Vendor: context-sensitive actions */}
+              {!isAdmin && order.status === 'paid' && (
+                <Box display="flex" flexDirection="column" gap={1.5}>
+                  <TextField
+                    label="Tracking Number"
+                    size="small"
+                    fullWidth
+                    value={trackingNumber}
+                    onChange={(e) => setTrackingNumber(e.target.value)}
+                  />
+                  <TextField
+                    label="Carrier"
+                    size="small"
+                    fullWidth
+                    value={carrier}
+                    onChange={(e) => setCarrier(e.target.value)}
+                  />
+                  <Button
+                    variant="contained"
+                    size="small"
+                    disabled={!trackingNumber.trim() || !carrier.trim() || statusMutation.isPending}
+                    onClick={() => statusMutation.mutate({ status: 'shipped', trackingNumber: trackingNumber.trim(), carrier: carrier.trim() })}
+                    sx={{ bgcolor: '#1a1a2e' }}
+                  >
+                    Confirm Shipment
+                  </Button>
+                </Box>
+              )}
+
+              {!isAdmin && order.status === 'refund_requested' && (
+                <Button
+                  variant="contained"
+                  color="warning"
+                  size="small"
+                  fullWidth
                   disabled={statusMutation.isPending}
+                  onClick={() => statusMutation.mutate({ status: 'cancelled' })}
                 >
-                  {statusOptions.map((s) => (
-                    <MenuItem key={s} value={s} sx={{ textTransform: 'capitalize' }}>{s}</MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
+                  Approve Refund
+                </Button>
+              )}
+
+              {!isAdmin && order.status !== 'paid' && order.status !== 'refund_requested' && (
+                <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+                  No actions available for this status.
+                </Typography>
+              )}
             </CardContent>
           </Card>
         </Grid>

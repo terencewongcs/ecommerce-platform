@@ -70,6 +70,15 @@ export default function UserMenu() {
             My Account
           </Link>
 
+          {/* My orders */}
+          <Link
+            to="/account/orders"
+            onClick={() => setOpen(false)}
+            className="block px-4 py-3 text-xs tracking-[0.15em] uppercase text-brand-slate hover:text-brand-black hover:bg-brand-surface/40 transition-colors duration-150"
+          >
+            My Orders
+          </Link>
+
           {/* Sign out */}
           <button
             onClick={handleSignOut}

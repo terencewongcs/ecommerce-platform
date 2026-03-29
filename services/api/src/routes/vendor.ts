@@ -34,6 +34,63 @@ const ProductBodySchema = z.object({
   isPublished: z.boolean().default(false),
 });
 
+// ── GET /vendor/stats ────────────────────────────────────────────────────────
+
+router.get("/stats", requireVendor, async (req: Request, res: Response) => {
+  const vendorId = new mongoose.Types.ObjectId(req.user!.sub);
+  const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+
+  const vendorProductIds = await Product.find({ vendorId }).distinct("_id");
+
+  const orderFilter = { "items.productId": { $in: vendorProductIds } };
+
+  const [totalProducts, publishedProducts, totalOrders, revenueResult, dailyRevenue] =
+    await Promise.all([
+      Product.countDocuments({ vendorId }),
+      Product.countDocuments({ vendorId, isPublished: true }),
+      Order.countDocuments(orderFilter),
+
+      // Sum unitPrice * quantity for this vendor's items only
+      Order.aggregate([
+        { $match: orderFilter },
+        { $unwind: "$items" },
+        { $match: { "items.productId": { $in: vendorProductIds } } },
+        { $group: { _id: null, total: { $sum: { $multiply: ["$items.unitPrice", "$items.quantity"] } } } },
+      ]),
+
+      // Daily revenue: group by date+orderId first to count distinct orders, then sum by date
+      Order.aggregate([
+        { $match: { createdAt: { $gte: sevenDaysAgo }, ...orderFilter } },
+        { $unwind: "$items" },
+        { $match: { "items.productId": { $in: vendorProductIds } } },
+        {
+          $group: {
+            _id: {
+              date: { $dateToString: { format: "%Y-%m-%d", date: "$createdAt" } },
+              orderId: "$_id",
+            },
+            revenue: { $sum: { $multiply: ["$items.unitPrice", "$items.quantity"] } },
+          },
+        },
+        {
+          $group: {
+            _id: "$_id.date",
+            revenue: { $sum: "$revenue" },
+            orders: { $sum: 1 },
+          },
+        },
+        { $sort: { _id: 1 } },
+      ]),
+    ]);
+
+  res.json({
+    products: { total: totalProducts, published: publishedProducts },
+    orders: { total: totalOrders },
+    revenue: { total: (revenueResult[0]?.total as number | undefined) ?? 0 },
+    dailyRevenue: dailyRevenue as Array<{ _id: string; revenue: number; orders: number }>,
+  });
+});
+
 // ── GET /vendor/products ──────────────────────────────────────────────────────
 
 router.get("/products", requireVendor, async (req: Request, res: Response) => {
@@ -145,12 +202,33 @@ router.get("/orders", requireVendor, async (req: Request, res: Response) => {
   res.json({ orders, pagination: { page, limit, total, totalPages: Math.ceil(total / limit) } });
 });
 
+// ── GET /vendor/orders/:id ───────────────────────────────────────────────────
+
+router.get("/orders/:id", requireVendor, async (req: Request, res: Response) => {
+  const vendorProductIds = await Product.find({
+    vendorId: new mongoose.Types.ObjectId(req.user!.sub),
+  }).distinct("_id");
+
+  // Vendor can only view orders that contain at least one of their products
+  const order = await Order.findOne({
+    _id: req.params.id,
+    "items.productId": { $in: vendorProductIds },
+  }).lean();
+
+  if (!order) {
+    res.status(404).json({ error: "Order not found" });
+    return;
+  }
+
+  res.json({ order });
+});
+
 // ── PATCH /vendor/orders/:id/status ──────────────────────────────────────────
 
 const UpdateOrderStatusSchema = z
   .object({
-    // Vendors can only move orders forward; cancellation and refund approval have dedicated routes
-    status: z.enum(["processing", "shipped", "delivered", "refunded"]),
+    // Vendors can ship orders or approve refunds (cancelled = refund approved)
+    status: z.enum(["shipped", "cancelled"]),
     // Required when status is "shipped"
     trackingNumber: z.string().min(1).optional(),
     carrier: z.string().min(1).optional(),
@@ -185,8 +263,8 @@ router.patch("/orders/:id/status", requireVendor, async (req: Request, res: Resp
 
   const { status, trackingNumber, carrier } = parsed.data;
 
-  // ── refunded: call Stripe Refund API before updating DB ──────────────────
-  if (status === "refunded") {
+  // ── cancelled: vendor approves refund — initiate Stripe refund, then wait for webhook ──
+  if (status === "cancelled") {
     if (order.status !== "refund_requested") {
       res.status(409).json({ error: "Order must be in refund_requested status to approve refund" });
       return;
@@ -200,7 +278,8 @@ router.patch("/orders/:id/status", requireVendor, async (req: Request, res: Resp
       return;
     }
 
-    order.status = "refunded";
+    // Set to cancelled now; the charge.refunded webhook will update to refunded once Stripe confirms
+    order.status = "cancelled";
     await order.save();
 
     try {

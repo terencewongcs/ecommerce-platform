@@ -3,10 +3,8 @@ import { z } from "zod";
 export const OrderStatusSchema = z.enum([
   "pending_payment",
   "paid",
-  "processing",
   "shipped",
   "delivered",
-  "completed",
   "cancelled",
   "refund_requested",
   "refunded",

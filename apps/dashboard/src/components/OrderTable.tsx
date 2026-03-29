@@ -25,10 +25,8 @@ interface OrderTableProps {
 const STATUS_COLOR: Record<OrderStatus, 'default' | 'warning' | 'info' | 'primary' | 'success' | 'error'> = {
   pending_payment:  'warning',
   paid:             'info',
-  processing:       'info',
   shipped:          'primary',
   delivered:        'success',
-  completed:        'success',
   cancelled:        'error',
   refund_requested: 'warning',
   refunded:         'default',

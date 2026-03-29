@@ -46,7 +46,7 @@ router.post("/webhook", async (req: Request, res: Response) => {
     res.status(400).json({ error: "Invalid Stripe signature" });
     return;
   }
-
+console.log("!!!!!!event.type",event.type);
   if (event.type === "payment_intent.succeeded") {
     const pi = event.data.object as Stripe.PaymentIntent;
 
@@ -85,6 +85,25 @@ router.post("/webhook", async (req: Request, res: Response) => {
       console.error("[webhook] DB error on payment_intent.succeeded:", dbErr);
       res.status(500).json({ error: "Internal error" });
       return;
+    }
+  }
+
+  // ── charge.refunded: vendor-approved refund was processed by Stripe ──────────
+  if (event.type === "charge.refunded") {
+    const charge = event.data.object as Stripe.Charge;
+    const paymentIntentId = typeof charge.payment_intent === "string" ? charge.payment_intent : null;
+    if (paymentIntentId) {
+      try {
+        // Idempotency guard: only update if order is still in cancelled (refund approved but not yet confirmed)
+        await Order.findOneAndUpdate(
+          { stripePaymentIntentId: paymentIntentId, status: "cancelled" },
+          { $set: { status: "refunded" } },
+        );
+      } catch (dbErr) {
+        console.error("[webhook] DB error on charge.refunded:", dbErr);
+        res.status(500).json({ error: "Internal error" });
+        return;
+      }
     }
   }
 
@@ -261,8 +280,8 @@ router.post("/:id/cancel", requireAuth, async (req: Request, res: Response) => {
     res.status(404).json({ error: "Order not found" });
     return;
   }
-  if (order.status !== "pending_payment") {
-    res.status(409).json({ error: "Only pending_payment orders can be cancelled" });
+  if (order.status !== "pending_payment" && order.status !== "paid") {
+    res.status(409).json({ error: "Only pending_payment or paid orders can be cancelled" });
     return;
   }
 
@@ -296,12 +315,12 @@ router.post("/:id/refund-request", requireAuth, async (req: Request, res: Respon
     return;
   }
 
-  // Atomic guard: only allows transition from "processing" (per state machine)
+  // Atomic guard: only allows transition from "paid" (per state machine)
   const order = await Order.findOneAndUpdate(
     {
       _id: req.params.id,
       userId: req.user!.sub,
-      status: "processing",
+      status: "paid",
     },
     {
       $set: { status: "refund_requested", refundReason: parsed.data.reason },
@@ -326,21 +345,6 @@ router.patch("/:id/deliver", requireAuth, async (req: Request, res: Response) =>
   ).lean();
   if (!order) {
     res.status(404).json({ error: "Order not found or not in shipped status" });
-    return;
-  }
-  res.json({ order });
-});
-
-// ── PATCH /orders/:id/complete ────────────────────────────────────────────────
-
-router.patch("/:id/complete", requireAuth, async (req: Request, res: Response) => {
-  const order = await Order.findOneAndUpdate(
-    { _id: req.params.id, userId: req.user!.sub, status: "delivered" },
-    { $set: { status: "completed" } },
-    { new: true },
-  ).lean();
-  if (!order) {
-    res.status(404).json({ error: "Order not found or not in delivered status" });
     return;
   }
   res.json({ order });

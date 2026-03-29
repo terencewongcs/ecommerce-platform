@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { LoginSchema, type LoginInput } from '@trendyuniquellc/types';
+import { VendorRegisterSchema, type VendorRegisterInput } from '@trendyuniquellc/types';
 import Box from '@mui/material/Box';
 import Card from '@mui/material/Card';
 import CardContent from '@mui/material/CardContent';
@@ -12,12 +12,13 @@ import Typography from '@mui/material/Typography';
 import Alert from '@mui/material/Alert';
 import MuiLink from '@mui/material/Link';
 import { useAuth } from '../../hooks/useAuth';
+import { ApiError } from '../../lib/apiClient';
 
-export default function LoginPage() {
+export default function VendorRegisterPage() {
   const navigate = useNavigate();
-  const { user, login } = useAuth();
+  const { user, vendorRegister } = useAuth();
 
-  // Redirect already-authenticated admin/vendor users to the dashboard
+  // Redirect already-authenticated vendors/admins away from this page
   useEffect(() => {
     if (user && user.role !== 'customer') {
       navigate('/', { replace: true });
@@ -29,14 +30,18 @@ export default function LoginPage() {
     handleSubmit,
     setError,
     formState: { errors, isSubmitting },
-  } = useForm<LoginInput>({ resolver: zodResolver(LoginSchema) });
+  } = useForm<VendorRegisterInput>({ resolver: zodResolver(VendorRegisterSchema) });
 
-  async function onSubmit({ email, password }: LoginInput) {
+  async function onSubmit(data: VendorRegisterInput) {
     try {
-      await login(email, password);
+      await vendorRegister(data);
       navigate('/');
-    } catch {
-      setError('root', { message: 'Invalid email or password. Please try again.' });
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 409) {
+        setError('email', { message: 'This email is already registered.' });
+      } else {
+        setError('root', { message: 'Something went wrong. Please try again.' });
+      }
     }
   }
 
@@ -48,16 +53,44 @@ export default function LoginPage() {
       minHeight="100vh"
       bgcolor="grey.100"
     >
-      <Card sx={{ width: '100%', maxWidth: 400 }}>
+      <Card sx={{ width: '100%', maxWidth: 440 }}>
         <CardContent sx={{ p: 4 }}>
           <Typography variant="h5" fontWeight={700} gutterBottom align="center">
             TrendyUnique
           </Typography>
           <Typography variant="body2" color="text.secondary" align="center" sx={{ mb: 3 }}>
-            Admin Dashboard
+            Create a Vendor Account
           </Typography>
 
           <Box component="form" onSubmit={handleSubmit(onSubmit)} noValidate>
+            <Box display="flex" gap={1}>
+              <TextField
+                label="First Name"
+                fullWidth
+                margin="normal"
+                error={!!errors.firstName}
+                helperText={errors.firstName?.message}
+                {...register('firstName')}
+              />
+              <TextField
+                label="Last Name"
+                fullWidth
+                margin="normal"
+                error={!!errors.lastName}
+                helperText={errors.lastName?.message}
+                {...register('lastName')}
+              />
+            </Box>
+
+            <TextField
+              label="Store Name"
+              fullWidth
+              margin="normal"
+              error={!!errors.storeName}
+              helperText={errors.storeName?.message}
+              {...register('storeName')}
+            />
+
             <TextField
               label="Email"
               type="email"
@@ -67,6 +100,7 @@ export default function LoginPage() {
               helperText={errors.email?.message}
               {...register('email')}
             />
+
             <TextField
               label="Password"
               type="password"
@@ -90,13 +124,13 @@ export default function LoginPage() {
               disabled={isSubmitting}
               sx={{ mt: 3, py: 1.5 }}
             >
-              {isSubmitting ? 'Signing in…' : 'Sign In'}
+              {isSubmitting ? 'Creating account…' : 'Create Vendor Account'}
             </Button>
 
             <Typography variant="body2" align="center" sx={{ mt: 2 }}>
-              New vendor?{' '}
-              <MuiLink component={Link} to="/register" underline="hover">
-                Create a vendor account
+              Already have an account?{' '}
+              <MuiLink component={Link} to="/login" underline="hover">
+                Sign in
               </MuiLink>
             </Typography>
           </Box>

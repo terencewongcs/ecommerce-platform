@@ -3,10 +3,8 @@ import mongoose, { Schema, type Document } from "mongoose";
 export type OrderStatus =
   | "pending_payment"
   | "paid"
-  | "processing"
   | "shipped"
   | "delivered"
-  | "completed"
   | "cancelled"
   | "refund_requested"
   | "refunded";
@@ -77,7 +75,7 @@ const OrderSchema = new Schema<IOrder>(
     items: { type: [OrderItemSchema], required: true },
     status: {
       type: String,
-      enum: ["pending_payment", "paid", "processing", "shipped", "delivered", "completed", "cancelled", "refund_requested", "refunded"],
+      enum: ["pending_payment", "paid", "shipped", "delivered", "cancelled", "refund_requested", "refunded"],
       default: "pending_payment",
     },
     stripePaymentIntentId: { type: String, required: true },
