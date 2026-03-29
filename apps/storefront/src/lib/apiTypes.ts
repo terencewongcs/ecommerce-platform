@@ -46,6 +46,8 @@ export function toStaticProduct(p: ApiProduct): StaticProduct {
     category: p.category as Category[],
     sizes: p.sizes,
     bg: CATEGORY_BG[firstCategory] ?? '#D4C4B5',
+    // Pass through real images; UI components fall back to bg when this is empty
+    ...(p.images.length > 0 ? { images: p.images } : {}),
     tag: p.tag as ProductTag,
   };
 }

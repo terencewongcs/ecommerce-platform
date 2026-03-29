@@ -31,12 +31,20 @@ export default function FeaturedProducts() {
             : (data?.products as ApiProduct[] ?? []).map((p) => (
                 <Link key={String(p._id ?? p.slug)} to={`/products/${p.slug}`} className="group">
 
-                  {/* Image placeholder */}
+                  {/* Product image — real photo if available, color placeholder otherwise */}
                   <div className="relative aspect-[3/4] overflow-hidden mb-4">
-                    <div
-                      className="w-full h-full transition-transform duration-700 group-hover:scale-105"
-                      style={{ backgroundColor: '#D4C4B5' }}
-                    />
+                    {p.images?.[0] ? (
+                      <img
+                        src={p.images[0]}
+                        alt={p.name}
+                        className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+                      />
+                    ) : (
+                      <div
+                        className="w-full h-full transition-transform duration-700 group-hover:scale-105"
+                        style={{ backgroundColor: '#D4C4B5' }}
+                      />
+                    )}
                     {p.tag && (
                       <span
                         className={`absolute top-3 left-3 text-[10px] tracking-[0.15em] uppercase px-2.5 py-1 font-semibold ${TAG_STYLES[p.tag]}`}

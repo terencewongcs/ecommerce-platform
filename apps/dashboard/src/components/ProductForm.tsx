@@ -18,9 +18,9 @@ import Button from '@mui/material/Button';
 import IconButton from '@mui/material/IconButton';
 import Typography from '@mui/material/Typography';
 import Grid from '@mui/material/Grid';
-import AddIcon from '@mui/icons-material/Add';
 import DeleteIcon from '@mui/icons-material/Delete';
 import type { ApiProduct } from '../lib/apiTypes';
+import ImageUploader from './ImageUploader';
 
 // Form-specific schema — images are objects for useFieldArray, tag includes empty string for "none".
 const ProductFormSchema = z.object({
@@ -295,29 +295,36 @@ export default function ProductForm({ defaultValues, onSubmit, isSubmitting }: P
         {/* Images */}
         <Grid item xs={12}>
           <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-            Images (URLs)
+            Images
           </Typography>
-          {fields.map((field, index) => (
-            <Box key={field.id} display="flex" gap={1} mb={1}>
-              <TextField
-                fullWidth
-                size="small"
-                placeholder="https://..."
-                {...register(`images.${index}.url`)}
-              />
-              <IconButton size="small" color="error" onClick={() => remove(index)}>
-                <DeleteIcon fontSize="small" />
-              </IconButton>
-            </Box>
-          ))}
-          <Button
-            size="small"
-            startIcon={<AddIcon />}
-            onClick={() => append({ url: '' })}
-            variant="outlined"
-          >
-            Add Image URL
-          </Button>
+          {/* Thumbnail grid — one tile per uploaded image */}
+          <Box display="flex" flexWrap="wrap" gap={1} mb={1}>
+            {fields.map((field, index) => (
+              <Box
+                key={field.id}
+                sx={{ position: 'relative', width: 96, height: 96, borderRadius: 1, overflow: 'hidden', border: '1px solid', borderColor: 'grey.300' }}
+              >
+                <img
+                  src={field.url}
+                  alt={`Product image ${index + 1}`}
+                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                />
+                <IconButton
+                  size="small"
+                  color="error"
+                  onClick={() => remove(index)}
+                  sx={{ position: 'absolute', top: 2, right: 2, bgcolor: 'rgba(255,255,255,0.85)', p: '2px' }}
+                >
+                  <DeleteIcon fontSize="small" />
+                </IconButton>
+              </Box>
+            ))}
+          </Box>
+          {/* Upload button — appends the returned URL to the images field array */}
+          <ImageUploader
+            onUploaded={(url) => append({ url })}
+            disabled={isSubmitting}
+          />
         </Grid>
 
         {/* Published */}
