@@ -44,7 +44,6 @@
 
 ### Infrastructure & Tooling
 
-- **容器化**：Docker + Docker Compose（单台 VPS 部署）
 - **CDN**：Cloudflare CDN
 - **Monorepo 工具**：pnpm v9（workspaces）+ Turborepo v2
 - **代码质量**：ESLint v9（flat config）+ Prettier v3
