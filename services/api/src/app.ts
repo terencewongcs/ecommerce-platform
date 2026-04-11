@@ -38,7 +38,7 @@ app.use((req: Request, _res: Response, next: NextFunction) => {
 
 const ALLOWED_ORIGINS =
   env.NODE_ENV === "production"
-    ? (["https://trendyunique.org", env.DASHBOARD_URL ?? ""] as string[]).filter(Boolean)
+    ? (["https://trendyunique.org", "https://www.trendyunique.org", env.DASHBOARD_URL ?? ""] as string[]).filter(Boolean)
     : ["http://localhost:3000", "http://localhost:5173", "http://localhost:3002"];
 
 app.use((req: Request, res: Response, next: NextFunction) => {
