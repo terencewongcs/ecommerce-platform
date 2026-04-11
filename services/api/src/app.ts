@@ -36,14 +36,20 @@ app.use((req: Request, _res: Response, next: NextFunction) => {
 
 // ── CORS ─────────────────────────────────────────────────────────────────────
 
-const ALLOWED_ORIGINS =
-  env.NODE_ENV === "production"
-    ? (["https://trendyunique.org", "https://www.trendyunique.org", env.DASHBOARD_URL ?? ""] as string[]).filter(Boolean)
-    : ["http://localhost:3000", "http://localhost:5173", "http://localhost:3002"];
+const PRODUCTION_ORIGINS = (["https://trendyunique.org", "https://www.trendyunique.org", env.DASHBOARD_URL ?? ""] as string[]).filter(Boolean);
+const DEV_ORIGINS = ["http://localhost:3000", "http://localhost:5173", "http://localhost:3002"];
+
+function isAllowedOrigin(origin: string): boolean {
+  if (env.NODE_ENV === "production") {
+    return PRODUCTION_ORIGINS.includes(origin);
+  }
+  // In development/preview: allow localhost and any Vercel preview URL
+  return DEV_ORIGINS.includes(origin) || /^https:\/\/[a-z0-9-]+\.vercel\.app$/.test(origin);
+}
 
 app.use((req: Request, res: Response, next: NextFunction) => {
   const origin = req.headers.origin ?? "";
-  if (ALLOWED_ORIGINS.includes(origin)) {
+  if (isAllowedOrigin(origin)) {
     res.setHeader("Access-Control-Allow-Origin", origin);
     res.setHeader("Access-Control-Allow-Credentials", "true");
     res.setHeader("Access-Control-Allow-Methods", "GET,POST,PUT,PATCH,DELETE,OPTIONS");
