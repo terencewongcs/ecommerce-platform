@@ -1,6 +1,6 @@
 import "dotenv/config";
-import { connectDB } from "../src/lib/mongoose.js";
-import app from "../src/app.js";
+import { connectDB } from "./lib/mongoose.js";
+import app from "./app.js";
 
 // Connect to MongoDB on cold start (cached on warm invocations)
 connectDB().catch(console.error);
