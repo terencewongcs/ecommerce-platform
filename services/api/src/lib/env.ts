@@ -6,7 +6,7 @@ const EnvSchema = z.object({
     .default("development"),
   PORT: z.coerce.number().int().positive().default(3001),
   MONGODB_URI: z.string().url(),
-  REDIS_URL: z.string().url(),
+  DASHBOARD_URL: z.string().url().optional(),
   JWT_ACCESS_SECRET: z.string().min(32),
   JWT_REFRESH_SECRET: z.string().min(32),
   JWT_ACCESS_EXPIRES_IN: z.string().default("15m"),
@@ -20,7 +20,7 @@ const EnvSchema = z.object({
   STRIPE_WEBHOOK_SECRET: z.string().min(1),
   SENTRY_DSN: z.string().url().optional(),
   RESEND_API_KEY: z.string().min(1).optional(),
-  RESEND_FROM_EMAIL: z.string().email().default("noreply@trendyunique.com"),
+  RESEND_FROM_EMAIL: z.string().email().default("noreply@trendyunique.org"),
   STOREFRONT_URL: z.string().url().default("http://localhost:3000"),
 });
 

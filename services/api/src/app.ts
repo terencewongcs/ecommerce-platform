@@ -38,7 +38,7 @@ app.use((req: Request, _res: Response, next: NextFunction) => {
 
 const ALLOWED_ORIGINS =
   env.NODE_ENV === "production"
-    ? ["https://trendyunique.com"] // replace with real domain at launch
+    ? (["https://trendyunique.org", env.DASHBOARD_URL ?? ""] as string[]).filter(Boolean)
     : ["http://localhost:3000", "http://localhost:5173", "http://localhost:3002"];
 
 app.use((req: Request, res: Response, next: NextFunction) => {
