@@ -211,6 +211,9 @@ importers:
       '@sentry/node':
         specifier: ^8.0.0
         version: 8.55.0
+      '@trendyuniquellc/tsconfig':
+        specifier: workspace:*
+        version: link:../../packages/tsconfig
       '@trendyuniquellc/types':
         specifier: workspace:*
         version: link:../../packages/types
@@ -245,9 +248,6 @@ importers:
         specifier: ^3.0.0
         version: 3.25.76
     devDependencies:
-      '@trendyuniquellc/tsconfig':
-        specifier: workspace:*
-        version: link:../../packages/tsconfig
       '@types/bcrypt':
         specifier: ^5.0.0
         version: 5.0.2
