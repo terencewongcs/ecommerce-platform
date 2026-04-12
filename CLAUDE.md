@@ -19,6 +19,26 @@
 
 ---
 
+## Deployment
+
+### staging
+
+Vercel environment: Preview
+Mongodb: dec-cluster/staging
+Domains:
+- staging.trendyunique.org
+- dashboard-staging.trendyunique.org
+- api-staging.trendyunique.org
+
+### production
+
+Vercel environment: Production
+Mongodb: dec-cluster/production
+Domains:
+- trendyunique.org
+- dashboard.staging.trendyunique.org
+- api.staging.trendyunique.org
+
 ## 设计文档
 
 - ecommerce-platform-design.md

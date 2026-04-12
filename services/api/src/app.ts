@@ -38,13 +38,21 @@ app.use((req: Request, _res: Response, next: NextFunction) => {
 
 const PRODUCTION_ORIGINS = (["https://trendyunique.org", "https://www.trendyunique.org", env.DASHBOARD_URL ?? ""] as string[]).filter(Boolean);
 const DEV_ORIGINS = ["http://localhost:3000", "http://localhost:5173", "http://localhost:3002"];
+// Staging custom domains injected via env vars (set in Vercel Preview environment)
+const STAGING_ORIGINS = [env.STOREFRONT_URL, env.DASHBOARD_URL ?? ""].filter(
+  (s) => s && !s.includes("localhost")
+);
 
 function isAllowedOrigin(origin: string): boolean {
   if (env.NODE_ENV === "production") {
     return PRODUCTION_ORIGINS.includes(origin);
   }
-  // In development/preview: allow localhost and any Vercel preview URL
-  return DEV_ORIGINS.includes(origin) || /^https:\/\/[a-z0-9-]+\.vercel\.app$/.test(origin);
+  // Staging: allow custom staging domains, localhost, and temporary vercel.app preview URLs
+  return (
+    DEV_ORIGINS.includes(origin) ||
+    STAGING_ORIGINS.includes(origin) ||
+    /^https:\/\/[a-z0-9-]+\.vercel\.app$/.test(origin)
+  );
 }
 
 app.use((req: Request, res: Response, next: NextFunction) => {
