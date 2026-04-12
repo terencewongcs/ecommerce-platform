@@ -1,5 +1,6 @@
 import express, { type Express, type Request, type Response, type NextFunction } from "express";
 import { env } from "./lib/env.js";
+import { connectDB } from "./lib/mongoose.js";
 import authRouter from "./routes/auth.js";
 import productsRouter from "./routes/products.js";
 import adminRouter from "./routes/admin.js";
@@ -68,6 +69,18 @@ app.use((req: Request, res: Response, next: NextFunction) => {
     return;
   }
   next();
+});
+
+// ── DB connection ─────────────────────────────────────────────────────────────
+// Must run before routes. connectDB() is idempotent — reuses cached connection on warm invocations.
+
+app.use(async (_req: Request, _res: Response, next: NextFunction) => {
+  try {
+    await connectDB();
+    next();
+  } catch (err) {
+    next(err);
+  }
 });
 
 // ── Routes ───────────────────────────────────────────────────────────────────
