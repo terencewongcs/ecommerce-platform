@@ -1,8 +1,8 @@
 // src/vercel.ts
 import "dotenv/config";
 
-// src/lib/mongoose.ts
-import mongoose from "mongoose";
+// src/app.ts
+import express from "express";
 
 // src/lib/env.ts
 import { z } from "zod";
@@ -30,6 +30,7 @@ var EnvSchema = z.object({
 var env = EnvSchema.parse(process.env);
 
 // src/lib/mongoose.ts
+import mongoose from "mongoose";
 async function connectDB() {
   if (global.__mongooseConn && mongoose.connection.readyState === 1) {
     return;
@@ -37,9 +38,6 @@ async function connectDB() {
   await mongoose.connect(env.MONGODB_URI);
   global.__mongooseConn = mongoose;
 }
-
-// src/app.ts
-import express from "express";
 
 // src/routes/auth.ts
 import { Router } from "express";
@@ -1693,10 +1691,20 @@ app.use((req, _res, next) => {
   }
   next();
 });
-var ALLOWED_ORIGINS = env.NODE_ENV === "production" ? ["https://trendyunique.org", env.DASHBOARD_URL ?? ""].filter(Boolean) : ["http://localhost:3000", "http://localhost:5173", "http://localhost:3002"];
+var PRODUCTION_ORIGINS = ["https://trendyunique.org", "https://www.trendyunique.org", env.DASHBOARD_URL ?? ""].filter(Boolean);
+var DEV_ORIGINS = ["http://localhost:3000", "http://localhost:5173", "http://localhost:3002"];
+var STAGING_ORIGINS = [env.STOREFRONT_URL, env.DASHBOARD_URL ?? ""].filter(
+  (s) => s && !s.includes("localhost")
+);
+function isAllowedOrigin(origin) {
+  if (env.NODE_ENV === "production") {
+    return PRODUCTION_ORIGINS.includes(origin);
+  }
+  return DEV_ORIGINS.includes(origin) || STAGING_ORIGINS.includes(origin) || /^https:\/\/[a-z0-9-]+\.vercel\.app$/.test(origin);
+}
 app.use((req, res, next) => {
   const origin = req.headers.origin ?? "";
-  if (ALLOWED_ORIGINS.includes(origin)) {
+  if (isAllowedOrigin(origin)) {
     res.setHeader("Access-Control-Allow-Origin", origin);
     res.setHeader("Access-Control-Allow-Credentials", "true");
     res.setHeader("Access-Control-Allow-Methods", "GET,POST,PUT,PATCH,DELETE,OPTIONS");
@@ -1707,6 +1715,14 @@ app.use((req, res, next) => {
     return;
   }
   next();
+});
+app.use(async (_req, _res, next) => {
+  try {
+    await connectDB();
+    next();
+  } catch (err) {
+    next(err);
+  }
 });
 app.use("/auth", auth_default);
 app.use("/products", products_default);
@@ -1730,7 +1746,6 @@ app.use((err, _req, res, _next) => {
 var app_default = app;
 
 // src/vercel.ts
-connectDB().catch(console.error);
 var vercel_default = app_default;
 export {
   vercel_default as default
