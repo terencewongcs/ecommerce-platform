@@ -4,6 +4,11 @@ const EnvSchema = z.object({
   NODE_ENV: z
     .enum(["development", "production", "test"])
     .default("development"),
+  // Vercel automatically sets this to "production", "preview", or "development".
+  // Unlike NODE_ENV (always "production" on Vercel), this correctly identifies staging vs prod.
+  VERCEL_ENV: z
+    .enum(["production", "preview", "development"])
+    .optional(),
   PORT: z.coerce.number().int().positive().default(3001),
   MONGODB_URI: z.string().url(),
   DASHBOARD_URL: z.string().url().optional(),

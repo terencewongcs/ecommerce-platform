@@ -45,10 +45,12 @@ const STAGING_ORIGINS = [env.STOREFRONT_URL, env.DASHBOARD_URL ?? ""].filter(
 );
 
 function isAllowedOrigin(origin: string): boolean {
-  if (env.NODE_ENV === "production") {
+  // Use VERCEL_ENV (not NODE_ENV) because Vercel sets NODE_ENV="production" on ALL deployments,
+  // including preview/staging. VERCEL_ENV correctly distinguishes "production" vs "preview".
+  if (env.VERCEL_ENV === "production") {
     return PRODUCTION_ORIGINS.includes(origin);
   }
-  // Staging: allow custom staging domains, localhost, and temporary vercel.app preview URLs
+  // Staging (preview) and local dev: allow staging domains, localhost, and *.vercel.app preview URLs
   return (
     DEV_ORIGINS.includes(origin) ||
     STAGING_ORIGINS.includes(origin) ||

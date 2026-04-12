@@ -8,6 +8,9 @@ import express from "express";
 import { z } from "zod";
 var EnvSchema = z.object({
   NODE_ENV: z.enum(["development", "production", "test"]).default("development"),
+  // Vercel automatically sets this to "production", "preview", or "development".
+  // Unlike NODE_ENV (always "production" on Vercel), this correctly identifies staging vs prod.
+  VERCEL_ENV: z.enum(["production", "preview", "development"]).optional(),
   PORT: z.coerce.number().int().positive().default(3001),
   MONGODB_URI: z.string().url(),
   DASHBOARD_URL: z.string().url().optional(),
@@ -1697,7 +1700,7 @@ var STAGING_ORIGINS = [env.STOREFRONT_URL, env.DASHBOARD_URL ?? ""].filter(
   (s) => s && !s.includes("localhost")
 );
 function isAllowedOrigin(origin) {
-  if (env.NODE_ENV === "production") {
+  if (env.VERCEL_ENV === "production") {
     return PRODUCTION_ORIGINS.includes(origin);
   }
   return DEV_ORIGINS.includes(origin) || STAGING_ORIGINS.includes(origin) || /^https:\/\/[a-z0-9-]+\.vercel\.app$/.test(origin);
