@@ -1,3 +1,4 @@
+import * as Sentry from "@sentry/node";
 import express, { type Express, type Request, type Response, type NextFunction } from "express";
 import { env } from "./lib/env.js";
 import { connectDB } from "./lib/mongoose.js";
@@ -105,6 +106,11 @@ app.get("/health", (_req: Request, res: Response) => {
 app.use((_req: Request, res: Response) => {
   res.status(404).json({ error: "Not found" });
 });
+
+// ── Sentry error handler ──────────────────────────────────────────────────────
+// Must be placed after all routes and before the custom error handler.
+// Captures exceptions passed via next(err) and reports them to Sentry.
+Sentry.setupExpressErrorHandler(app);
 
 // ── Global error handler ─────────────────────────────────────────────────────
 // Express 5 passes async errors here automatically
