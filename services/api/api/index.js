@@ -1,8 +1,8 @@
 // src/vercel.ts
 import "dotenv/config";
 
-// src/app.ts
-import express from "express";
+// src/instrument.ts
+import * as Sentry from "@sentry/node";
 
 // src/lib/env.ts
 import { z } from "zod";
@@ -31,6 +31,18 @@ var EnvSchema = z.object({
   STOREFRONT_URL: z.string().url().default("http://localhost:3000")
 });
 var env = EnvSchema.parse(process.env);
+
+// src/instrument.ts
+Sentry.init({
+  ...env.SENTRY_DSN && { dsn: env.SENTRY_DSN },
+  environment: env.VERCEL_ENV ?? "development",
+  // Capture 100% of transactions in non-production, 20% in production to save quota
+  tracesSampleRate: env.VERCEL_ENV === "production" ? 0.2 : 1
+});
+
+// src/app.ts
+import * as Sentry2 from "@sentry/node";
+import express from "express";
 
 // src/lib/mongoose.ts
 import mongoose from "mongoose";
@@ -1598,6 +1610,7 @@ router7.get("/", requireAuth, async (req, res) => {
     Order.find({ userId }).sort({ createdAt: -1 }).skip(skip).limit(limit).lean(),
     Order.countDocuments({ userId })
   ]);
+  throw new Error("sentry test");
   res.json({ orders, pagination: { page, limit, total, totalPages: Math.ceil(total / limit) } });
 });
 router7.get("/:id", requireAuth, async (req, res) => {
@@ -1740,6 +1753,7 @@ app.get("/health", (_req, res) => {
 app.use((_req, res) => {
   res.status(404).json({ error: "Not found" });
 });
+Sentry2.setupExpressErrorHandler(app);
 app.use((err, _req, res, _next) => {
   console.error(err);
   const status = err.status ?? 500;
