@@ -17,8 +17,6 @@
     - 不这么做会怎样
     - 解释每一行代码
 
----
-
 ## Deployment
 
 ### staging
@@ -39,6 +37,6 @@ Domains:
 - dashboard.staging.trendyunique.org
 - api.staging.trendyunique.org
 
-## 设计文档
+## Specifications and Requirements
 
-- ecommerce-platform-design.md
+Specifications.md
