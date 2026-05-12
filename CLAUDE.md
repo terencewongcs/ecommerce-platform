@@ -17,8 +17,6 @@
     - 不这么做会怎样
     - 解释每一行代码
 
----
+## Specifications and Requirements
 
-## 设计文档
-
-- ecommerce-platform-design.md
+Specifications.md
