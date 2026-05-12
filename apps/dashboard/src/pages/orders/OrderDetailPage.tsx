@@ -38,8 +38,6 @@ const STATUS_COLOR: Record<OrderStatus, 'default' | 'warning' | 'info' | 'primar
   refunded:         'default',
 };
 
-// Vendors can ship orders (paid → shipped) or approve refunds (refund_requested → cancelled)
-const VENDOR_STATUS_OPTIONS: OrderStatus[] = ['shipped', 'cancelled'];
 const ADMIN_STATUS_OPTIONS: OrderStatus[] = ['pending_payment', 'paid', 'shipped', 'delivered', 'cancelled', 'refund_requested', 'refunded'];
 
 export default function OrderDetailPage() {
