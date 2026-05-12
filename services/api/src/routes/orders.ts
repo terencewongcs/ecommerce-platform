@@ -251,6 +251,8 @@ router.get("/", requireAuth, async (req: Request, res: Response) => {
     Order.countDocuments({ userId }),
   ]);
 
+   throw new Error("sentry test")
+
   res.json({ orders, pagination: { page, limit, total, totalPages: Math.ceil(total / limit) } });
 });
 
