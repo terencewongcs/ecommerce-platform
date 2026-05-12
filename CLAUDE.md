@@ -17,26 +17,8 @@
     - 不这么做会怎样
     - 解释每一行代码
 
-## Deployment
+---
 
-### staging
+## 设计文档
 
-Vercel environment: Preview
-Mongodb: dec-cluster/staging
-Domains:
-- staging.trendyunique.org
-- dashboard-staging.trendyunique.org
-- api-staging.trendyunique.org
-
-### production
-
-Vercel environment: Production
-Mongodb: dec-cluster/production
-Domains:
-- trendyunique.org
-- dashboard.staging.trendyunique.org
-- api.staging.trendyunique.org
-
-## Specifications and Requirements
-
-Specifications.md
+- ecommerce-platform-design.md

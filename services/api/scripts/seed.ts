@@ -1366,39 +1366,23 @@ async function seed() {
   await mongoose.connect(env.MONGODB_URI);
   console.log("MongoDB connected");
 
-  // Find or create a seed admin user
-  let admin = await User.findOne({ email: "admin@trendyunique.com" });
+  // Find or create a seed admin user to use as vendorId
+  let admin = await User.findOne({ email: "admin2@trendyunique.com" });
   if (!admin) {
     const passwordHash = await bcrypt.hash("Admin1234!", 12);
     admin = await User.create({
-      email: "admin@trendyunique.com",
+      email: "admin2@trendyunique.com",
       passwordHash,
-      firstName: "Admin",
+      firstName: "Admin2",
       lastName: "TrendyUnique",
       role: "admin",
     });
-    console.log("Created admin user: admin@trendyunique.com / Admin1234!");
+    console.log("Created admin user: admin2@trendyunique.com / Admin1234!");
   } else {
     console.log("Admin user already exists, skipping creation");
   }
 
-    // Find or create a seed vendor user
-  let vendor = await User.findOne({ email: "vendor@trendyunique.com" });
-  if (!vendor) {
-    const passwordHash = await bcrypt.hash("password", 12);
-    vendor = await User.create({
-      email: "vendor@trendyunique.com",
-      passwordHash,
-      firstName: "Vendor",
-      lastName: "TrendyUnique",
-      role: "vendor",
-    });
-    console.log("Created vendor user: vendor@trendyunique.com / password");
-  } else {
-    console.log("Vendor user already exists, skipping creation");
-  }
-
-  const vendorId = vendor._id;
+  const vendorId = admin._id;
 
   // Insert products, skip duplicates (by slug)
   let inserted = 0;

@@ -1,16 +1,13 @@
 // src/vercel.ts
 import "dotenv/config";
 
-// src/instrument.ts
-import * as Sentry from "@sentry/node";
+// src/lib/mongoose.ts
+import mongoose from "mongoose";
 
 // src/lib/env.ts
 import { z } from "zod";
 var EnvSchema = z.object({
   NODE_ENV: z.enum(["development", "production", "test"]).default("development"),
-  // Vercel automatically sets this to "production", "preview", or "development".
-  // Unlike NODE_ENV (always "production" on Vercel), this correctly identifies staging vs prod.
-  VERCEL_ENV: z.enum(["production", "preview", "development"]).optional(),
   PORT: z.coerce.number().int().positive().default(3001),
   MONGODB_URI: z.string().url(),
   DASHBOARD_URL: z.string().url().optional(),
@@ -32,20 +29,7 @@ var EnvSchema = z.object({
 });
 var env = EnvSchema.parse(process.env);
 
-// src/instrument.ts
-Sentry.init({
-  ...env.SENTRY_DSN && { dsn: env.SENTRY_DSN },
-  environment: env.VERCEL_ENV ?? "development",
-  // Capture 100% of transactions in non-production, 20% in production to save quota
-  tracesSampleRate: env.VERCEL_ENV === "production" ? 0.2 : 1
-});
-
-// src/app.ts
-import * as Sentry2 from "@sentry/node";
-import express from "express";
-
 // src/lib/mongoose.ts
-import mongoose from "mongoose";
 async function connectDB() {
   if (global.__mongooseConn && mongoose.connection.readyState === 1) {
     return;
@@ -53,6 +37,9 @@ async function connectDB() {
   await mongoose.connect(env.MONGODB_URI);
   global.__mongooseConn = mongoose;
 }
+
+// src/app.ts
+import express from "express";
 
 // src/routes/auth.ts
 import { Router } from "express";
@@ -1610,7 +1597,6 @@ router7.get("/", requireAuth, async (req, res) => {
     Order.find({ userId }).sort({ createdAt: -1 }).skip(skip).limit(limit).lean(),
     Order.countDocuments({ userId })
   ]);
-  throw new Error("sentry test");
   res.json({ orders, pagination: { page, limit, total, totalPages: Math.ceil(total / limit) } });
 });
 router7.get("/:id", requireAuth, async (req, res) => {
@@ -1707,20 +1693,10 @@ app.use((req, _res, next) => {
   }
   next();
 });
-var PRODUCTION_ORIGINS = ["https://trendyunique.org", "https://www.trendyunique.org", env.DASHBOARD_URL ?? ""].filter(Boolean);
-var DEV_ORIGINS = ["http://localhost:3000", "http://localhost:5173", "http://localhost:3002"];
-var STAGING_ORIGINS = [env.STOREFRONT_URL, env.DASHBOARD_URL ?? ""].filter(
-  (s) => s && !s.includes("localhost")
-);
-function isAllowedOrigin(origin) {
-  if (env.VERCEL_ENV === "production") {
-    return PRODUCTION_ORIGINS.includes(origin);
-  }
-  return DEV_ORIGINS.includes(origin) || STAGING_ORIGINS.includes(origin) || /^https:\/\/[a-z0-9-]+\.vercel\.app$/.test(origin);
-}
+var ALLOWED_ORIGINS = env.NODE_ENV === "production" ? ["https://trendyunique.org", env.DASHBOARD_URL ?? ""].filter(Boolean) : ["http://localhost:3000", "http://localhost:5173", "http://localhost:3002"];
 app.use((req, res, next) => {
   const origin = req.headers.origin ?? "";
-  if (isAllowedOrigin(origin)) {
+  if (ALLOWED_ORIGINS.includes(origin)) {
     res.setHeader("Access-Control-Allow-Origin", origin);
     res.setHeader("Access-Control-Allow-Credentials", "true");
     res.setHeader("Access-Control-Allow-Methods", "GET,POST,PUT,PATCH,DELETE,OPTIONS");
@@ -1731,14 +1707,6 @@ app.use((req, res, next) => {
     return;
   }
   next();
-});
-app.use(async (_req, _res, next) => {
-  try {
-    await connectDB();
-    next();
-  } catch (err) {
-    next(err);
-  }
 });
 app.use("/auth", auth_default);
 app.use("/products", products_default);
@@ -1753,7 +1721,6 @@ app.get("/health", (_req, res) => {
 app.use((_req, res) => {
   res.status(404).json({ error: "Not found" });
 });
-Sentry2.setupExpressErrorHandler(app);
 app.use((err, _req, res, _next) => {
   console.error(err);
   const status = err.status ?? 500;
@@ -1763,6 +1730,7 @@ app.use((err, _req, res, _next) => {
 var app_default = app;
 
 // src/vercel.ts
+connectDB().catch(console.error);
 var vercel_default = app_default;
 export {
   vercel_default as default

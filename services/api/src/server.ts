@@ -1,5 +1,4 @@
 import "dotenv/config";
-import "./instrument.js";
 import mongoose from "mongoose";
 import { env } from "./lib/env.js";
 import app from "./app.js";
