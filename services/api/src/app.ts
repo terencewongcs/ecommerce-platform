@@ -1,5 +1,7 @@
+import * as Sentry from "@sentry/node";
 import express, { type Express, type Request, type Response, type NextFunction } from "express";
 import { env } from "./lib/env.js";
+import { connectDB } from "./lib/mongoose.js";
 import authRouter from "./routes/auth.js";
 import productsRouter from "./routes/products.js";
 import adminRouter from "./routes/admin.js";
@@ -36,14 +38,30 @@ app.use((req: Request, _res: Response, next: NextFunction) => {
 
 // ── CORS ─────────────────────────────────────────────────────────────────────
 
-const ALLOWED_ORIGINS =
-  env.NODE_ENV === "production"
-    ? (["https://trendyunique.org", "https://www.trendyunique.org", env.DASHBOARD_URL ?? ""] as string[]).filter(Boolean)
-    : ["http://localhost:3000", "http://localhost:5173", "http://localhost:3002"];
+const PRODUCTION_ORIGINS = (["https://trendyunique.org", "https://www.trendyunique.org", env.DASHBOARD_URL ?? ""] as string[]).filter(Boolean);
+const DEV_ORIGINS = ["http://localhost:3000", "http://localhost:5173", "http://localhost:3002"];
+// Staging custom domains injected via env vars (set in Vercel Preview environment)
+const STAGING_ORIGINS = [env.STOREFRONT_URL, env.DASHBOARD_URL ?? ""].filter(
+  (s) => s && !s.includes("localhost")
+);
+
+function isAllowedOrigin(origin: string): boolean {
+  // Use VERCEL_ENV (not NODE_ENV) because Vercel sets NODE_ENV="production" on ALL deployments,
+  // including preview/staging. VERCEL_ENV correctly distinguishes "production" vs "preview".
+  if (env.VERCEL_ENV === "production") {
+    return PRODUCTION_ORIGINS.includes(origin);
+  }
+  // Staging (preview) and local dev: allow staging domains, localhost, and *.vercel.app preview URLs
+  return (
+    DEV_ORIGINS.includes(origin) ||
+    STAGING_ORIGINS.includes(origin) ||
+    /^https:\/\/[a-z0-9-]+\.vercel\.app$/.test(origin)
+  );
+}
 
 app.use((req: Request, res: Response, next: NextFunction) => {
   const origin = req.headers.origin ?? "";
-  if (ALLOWED_ORIGINS.includes(origin)) {
+  if (isAllowedOrigin(origin)) {
     res.setHeader("Access-Control-Allow-Origin", origin);
     res.setHeader("Access-Control-Allow-Credentials", "true");
     res.setHeader("Access-Control-Allow-Methods", "GET,POST,PUT,PATCH,DELETE,OPTIONS");
@@ -54,6 +72,18 @@ app.use((req: Request, res: Response, next: NextFunction) => {
     return;
   }
   next();
+});
+
+// ── DB connection ─────────────────────────────────────────────────────────────
+// Must run before routes. connectDB() is idempotent — reuses cached connection on warm invocations.
+
+app.use(async (_req: Request, _res: Response, next: NextFunction) => {
+  try {
+    await connectDB();
+    next();
+  } catch (err) {
+    next(err);
+  }
 });
 
 // ── Routes ───────────────────────────────────────────────────────────────────
@@ -76,6 +106,11 @@ app.get("/health", (_req: Request, res: Response) => {
 app.use((_req: Request, res: Response) => {
   res.status(404).json({ error: "Not found" });
 });
+
+// ── Sentry error handler ──────────────────────────────────────────────────────
+// Must be placed after all routes and before the custom error handler.
+// Captures exceptions passed via next(err) and reports them to Sentry.
+Sentry.setupExpressErrorHandler(app);
 
 // ── Global error handler ─────────────────────────────────────────────────────
 // Express 5 passes async errors here automatically
