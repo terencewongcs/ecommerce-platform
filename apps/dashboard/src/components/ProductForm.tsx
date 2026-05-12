@@ -110,7 +110,7 @@ export default function ProductForm({ defaultValues, onSubmit, isSubmitting }: P
   // Sync TipTap content when editing an existing product
   useEffect(() => {
     if (editor && defaultValues?.description && editor.isEmpty) {
-      editor.commands.setContent(defaultValues.description, { emitUpdate: false });
+      editor.commands.setContent(defaultValues.description);
     }
   }, [editor, defaultValues?.description]);
 
