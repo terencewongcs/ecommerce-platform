@@ -16,6 +16,7 @@ const RESET_TOKEN_EXPIRY_MS = 60 * 60 * 1000; // 1 hour
 
 router.patch("/profile", requireAuth, async (req: Request, res: Response) => {
   const parsed = UpdateProfileSchema.safeParse(req.body);
+  
   if (!parsed.success) {
     res.status(400).json({ error: "Validation failed", details: parsed.error.flatten() });
     return;
